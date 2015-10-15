@@ -25,6 +25,7 @@
     "popper": "*",
     "rijs.components": "*",
     "rijs.core": "*",
+    "rijs.data": "*",
     "rijs.css": "*",
     "rijs.fn": "*",
     "rijs.serve": "*",
