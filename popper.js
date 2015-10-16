@@ -77,5 +77,5 @@ function tests() {
        + ' -i colors'
        + ' -i chai'
        + ' | sed -E "s/require\\(\'chai\'\\)/window.chai/"'
-       // + ' | uglifyjs'
+       + ' | uglifyjs'
 }
