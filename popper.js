@@ -66,9 +66,9 @@ function sum(p, v){
 
 function browsers() {
   return [
-  //   'ie11'
-  // , 'chrome'
-  // , 'firefox'
+    'ie11'
+  , 'chrome'
+  , 'firefox'
   ]
 }
 
