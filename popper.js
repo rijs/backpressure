@@ -19,7 +19,7 @@ popper = popper({
 
 popper.io.on('connection', function(socket){
   socket.on('beforeEach', function(){ 
-    popper.io.of('/').sockets.forEach(function(s){ s.deps = {} })
+    socket.deps = {}
     popper('foo'         , 'bar', headers())
     popper('some.css'    , '* { color: red }', headers())
     popper('object'      , { a:0 , b:1, c:2 }, headers())

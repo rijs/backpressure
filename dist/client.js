@@ -64,7 +64,8 @@ function track(ripple) {
 
     var exists = (name in this.deps);
     this.deps[name] = 1;
-    if (!exists) return (ripple.sync(this)(name), false);
+    if (!exists) ripple.sync(this)(name);
+    if (body.loading) return false;
     return true;
   };
 }
