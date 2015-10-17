@@ -27,6 +27,7 @@ function draw(ripple){
 }
 
 function start(ripple){
+  load(ripple)
   ready(ripple.draw)
   if (customs) ready(polytop(ripple))
   return ripple
@@ -55,6 +56,14 @@ function track(ripple){
     return true
   }
 }
+
+function load(ripple) {
+  group('pulling cache', fn =>
+    (parse(localStorage.ripple) || [])
+      .map(({ name }) => ripple(name, { loading }))
+  )
+}
+
 
 function untrack(ripple){
   return function(names) {
@@ -95,7 +104,7 @@ function loaded(ripple){
       deps
         .filter(not(is.in(ripple.resources)))
         .map(name => (debug('pulling', name), name))
-        .map(name => ripple(name, { loading: true }))
+        .map(name => ripple(name, { loading }))
 
       return deps
         .map(from(ripple.resources))
@@ -113,6 +122,7 @@ import identity from 'utilise/identity'
 import values from 'utilise/values'
 import client from 'utilise/client'
 import proxy from 'utilise/proxy'
+import group from 'utilise/group'
 import noop from 'utilise/noop'
 import not from 'utilise/not'
 import log from 'utilise/log'
@@ -122,4 +132,5 @@ log = log('[ri/backpressure]')
 err = err('[ri/backpressure]')
 var shadows = client && !!document.head.createShadowRoot
   , customs = client && !!document.registerElement
+  , loading = true
   , debug = noop

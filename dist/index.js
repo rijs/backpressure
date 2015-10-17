@@ -38,6 +38,7 @@ function draw(ripple) {
 }
 
 function start(ripple) {
+  load(ripple);
   ready(ripple.draw);
   if (customs) ready(polytop(ripple));
   return ripple;
@@ -67,6 +68,15 @@ function track(ripple) {
     if (body.loading) return false;
     return true;
   };
+}
+
+function load(ripple) {
+  group("pulling cache", function (fn) {
+    return (parse(localStorage.ripple) || []).map(function (_ref) {
+      var name = _ref.name;
+      return ripple(name, { loading: loading });
+    });
+  });
 }
 
 function untrack(ripple) {
@@ -99,7 +109,7 @@ function loaded(ripple) {
       deps.filter(not(is["in"](ripple.resources))).map(function (name) {
         return (debug("pulling", name), name);
       }).map(function (name) {
-        return ripple(name, { loading: true });
+        return ripple(name, { loading: loading });
       });
 
       return deps.map(from(ripple.resources)).every(not(key("body.loading"))) ? render(el) : false;
@@ -121,6 +131,8 @@ var client = _interopRequire(require("utilise/client"));
 
 var proxy = _interopRequire(require("utilise/proxy"));
 
+var group = _interopRequire(require("utilise/group"));
+
 var noop = _interopRequire(require("utilise/noop"));
 
 var not = _interopRequire(require("utilise/not"));
@@ -135,4 +147,5 @@ log = log("[ri/backpressure]");
 err = err("[ri/backpressure]");
 var shadows = client && !!document.head.createShadowRoot,
     customs = client && !!document.registerElement,
+    loading = true,
     debug = noop;

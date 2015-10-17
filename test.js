@@ -1,6 +1,7 @@
 var expect       = require('chai').expect
   , debounce     = require('utilise/debounce')
   , time         = require('utilise/time')
+  , str          = require('utilise/str')
   , components   = require('rijs.components')
   , core         = require('rijs.core')
   , data         = require('rijs.data')
@@ -9,15 +10,15 @@ var expect       = require('chai').expect
   , sync         = require('rijs.sync')
   , shadow       = require('rijs.shadow')
   , backpressure = require('./')
-  , ripple       = backpressure(sync(components(css(fn(data(core()))))))
   , container    = document.createElement('div')
+  , ripple       
   , temp
-
-window.ripple = ripple  
 
 describe('Backpressure', function(){
 
   before(function(){
+    localStorage.ripple = str([{ name: 'cached' }])
+    ripple = backpressure(sync(components(css(fn(data(core()))))))
     document.body.appendChild(container)
   })
 
@@ -35,6 +36,11 @@ describe('Backpressure', function(){
 
   after(function(){
     document.body.removeChild(container)
+  })
+
+  it('should refresh resources in cache', function(){  
+    expect(keys(ripple.resources)).to.eql(['cached'])
+    expect(ripple('cached')).to.eql({ loading: true })
   })
 
   it('should not load any resources by default', function(){  

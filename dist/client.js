@@ -39,6 +39,7 @@ function draw(ripple) {
 }
 
 function start(ripple) {
+  load(ripple);
   ready(ripple.draw);
   if (customs) ready(polytop(ripple));
   return ripple;
@@ -68,6 +69,15 @@ function track(ripple) {
     if (body.loading) return false;
     return true;
   };
+}
+
+function load(ripple) {
+  group("pulling cache", function (fn) {
+    return (parse(localStorage.ripple) || []).map(function (_ref) {
+      var name = _ref.name;
+      return ripple(name, { loading: loading });
+    });
+  });
 }
 
 function untrack(ripple) {
@@ -100,7 +110,7 @@ function loaded(ripple) {
       deps.filter(not(is["in"](ripple.resources))).map(function (name) {
         return (debug("pulling", name), name);
       }).map(function (name) {
-        return ripple(name, { loading: true });
+        return ripple(name, { loading: loading });
       });
 
       return deps.map(from(ripple.resources)).every(not(key("body.loading"))) ? render(el) : false;
@@ -122,6 +132,8 @@ var client = _interopRequire(require("utilise/client"));
 
 var proxy = _interopRequire(require("utilise/proxy"));
 
+var group = _interopRequire(require("utilise/group"));
+
 var noop = _interopRequire(require("utilise/noop"));
 
 var not = _interopRequire(require("utilise/not"));
@@ -136,8 +148,9 @@ log = log("[ri/backpressure]");
 err = err("[ri/backpressure]");
 var shadows = client && !!document.head.createShadowRoot,
     customs = client && !!document.registerElement,
+    loading = true,
     debug = noop;
-},{"utilise/client":2,"utilise/err":4,"utilise/identity":6,"utilise/is":7,"utilise/log":10,"utilise/noop":11,"utilise/not":12,"utilise/proxy":14,"utilise/values":18}],2:[function(require,module,exports){
+},{"utilise/client":2,"utilise/err":4,"utilise/group":6,"utilise/identity":7,"utilise/is":8,"utilise/log":11,"utilise/noop":12,"utilise/not":13,"utilise/proxy":15,"utilise/values":19}],2:[function(require,module,exports){
 module.exports = typeof window != 'undefined'
 },{}],3:[function(require,module,exports){
 var sel = require('utilise/sel')
@@ -145,7 +158,7 @@ var sel = require('utilise/sel')
 module.exports = function datum(node){
   return sel(node).datum()
 }
-},{"utilise/sel":15}],4:[function(require,module,exports){
+},{"utilise/sel":16}],4:[function(require,module,exports){
 var owner = require('utilise/owner')
   , to = require('utilise/to')
 
@@ -157,7 +170,7 @@ module.exports = function err(prefix){
     return console.error.apply(console, args), d
   }
 }
-},{"utilise/owner":13,"utilise/to":17}],5:[function(require,module,exports){
+},{"utilise/owner":14,"utilise/to":18}],5:[function(require,module,exports){
 var datum = require('utilise/datum')
   , key = require('utilise/key')
 
@@ -173,11 +186,28 @@ function from(o){
 function fromParent(k){
   return datum(this.parentNode)[k]
 }
-},{"utilise/datum":3,"utilise/key":8}],6:[function(require,module,exports){
+},{"utilise/datum":3,"utilise/key":9}],6:[function(require,module,exports){
+var client = require('utilise/client')
+  , owner = require('utilise/owner')
+
+module.exports = function group(prefix, fn){
+  if (!owner.console) return fn()
+  if (!console.groupCollapsed) polyfill()
+  console.groupCollapsed(prefix)
+  fn()
+  console.groupEnd(prefix)
+}
+
+function polyfill() {
+  console.groupCollapsed = console.groupEnd = function(d){
+    console.log('*****', d, '*****')
+  }
+}
+},{"utilise/client":2,"utilise/owner":14}],7:[function(require,module,exports){
 module.exports = function identity(d) {
   return d
 }
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 module.exports = is
 is.fn     = isFunction
 is.str    = isString
@@ -250,7 +280,7 @@ function isIn(set) {
          : d in set
   }
 }
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var is = require('utilise/is')
   , str = require('utilise/str')
 
@@ -275,11 +305,11 @@ module.exports = function key(k, v){
     }
   }
 }
-},{"utilise/is":7,"utilise/str":16}],9:[function(require,module,exports){
+},{"utilise/is":8,"utilise/str":17}],10:[function(require,module,exports){
 module.exports = function keys(o) {
   return Object.keys(o || {})
 }
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 var is = require('utilise/is')
   , to = require('utilise/to')
   , owner = require('utilise/owner')
@@ -293,19 +323,19 @@ module.exports = function log(prefix){
     return console.log.apply(console, args), d
   }
 }
-},{"utilise/is":7,"utilise/owner":13,"utilise/to":17}],11:[function(require,module,exports){
+},{"utilise/is":8,"utilise/owner":14,"utilise/to":18}],12:[function(require,module,exports){
 module.exports = function noop(){}
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 module.exports = function not(fn){
   return function(){
     return !fn.apply(this, arguments)
   }
 }
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 (function (global){
 module.exports = require('utilise/client') ? /* istanbul ignore next */ window : global
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"utilise/client":2}],14:[function(require,module,exports){
+},{"utilise/client":2}],15:[function(require,module,exports){
 var is = require('utilise/is')
 
 module.exports = function proxy(fn, ret, ctx){ 
@@ -314,11 +344,11 @@ module.exports = function proxy(fn, ret, ctx){
     return is.fn(ret) ? ret.call(ctx || this, result) : ret || result
   }
 }
-},{"utilise/is":7}],15:[function(require,module,exports){
+},{"utilise/is":8}],16:[function(require,module,exports){
 module.exports = function sel(){
   return d3.select.apply(this, arguments)
 }
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var is = require('utilise/is') 
 
 module.exports = function str(d){
@@ -328,7 +358,7 @@ module.exports = function str(d){
        : is.obj(d) ? JSON.stringify(d)
        : String(d)
 }
-},{"utilise/is":7}],17:[function(require,module,exports){
+},{"utilise/is":8}],18:[function(require,module,exports){
 module.exports = { 
   arr: toArray
 , obj: toObject
@@ -352,11 +382,11 @@ function toObject(d) {
     return p
   }
 }
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var keys = require('utilise/keys')
   , from = require('utilise/from')
 
 module.exports = function values(o) {
   return !o ? [] : keys(o).map(from(o))
 }
-},{"utilise/from":5,"utilise/keys":9}]},{},[1]);
+},{"utilise/from":5,"utilise/keys":10}]},{},[1]);
