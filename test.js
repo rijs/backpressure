@@ -43,6 +43,10 @@ describe('Backpressure', function(){
     expect(ripple('cached')).to.eql({ loading: true })
   })
 
+  it('should do nothing if no io', function(){  
+    expect(backpressure({})).to.be.ok
+  })
+
   it('should not load any resources by default', function(){  
     expect(keys(ripple.resources)).to.eql([])
   })

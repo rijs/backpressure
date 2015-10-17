@@ -4,6 +4,7 @@
 export default function backpressure(ripple){
   log('creating')
 
+  if (!ripple.io) return ripple
   if (client) return (ripple.draw = draw(ripple)(ripple.draw))
                    , (ripple.render = loaded(ripple)(ripple.render))
                    , (ripple.deps = deps)

@@ -10,7 +10,9 @@ module.exports = backpressure;
 function backpressure(ripple) {
   log("creating");
 
-  if (client) {
+  if (!ripple.io) {
+    return ripple;
+  }if (client) {
     return (ripple.draw = draw(ripple)(ripple.draw), ripple.render = loaded(ripple)(ripple.render), ripple.deps = deps, start(ripple));
   }values(ripple.types).map(function (type) {
     return type.to = proxy(type.to || identity, limit);
