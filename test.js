@@ -2,14 +2,14 @@ var expect       = require('chai').expect
   , debounce     = require('utilise/debounce')
   , time         = require('utilise/time')
   , str          = require('utilise/str')
-  , components   = require('rijs.components')
-  , core         = require('rijs.core')
-  , data         = require('rijs.data')
-  , css          = require('rijs.css')
-  , fn           = require('rijs.fn')
-  , sync         = require('rijs.sync')
-  , shadow       = require('rijs.shadow')
-  , backpressure = require('./')
+  , components   = require('rijs.components').default
+  , core         = require('rijs.core').default
+  , data         = require('rijs.data').default
+  , css          = require('rijs.css').default
+  , fn           = require('rijs.fn').default
+  , sync         = require('rijs.sync').default
+  , shadow       = require('rijs.shadow').default
+  , backpressure = require('./').default
   , container    = document.createElement('div')
   , ripple       
   , temp

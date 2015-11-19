@@ -10,8 +10,8 @@ export default function backpressure(ripple){
                    , (ripple.deps = deps)
                    , (start(ripple))
 
-  values(ripple.types).map(type => type.to = proxy(type.to || identity, limit))
-  values(ripple.types).map(type => type.from = proxy(type.from || identity, track(ripple)))
+  values(ripple.types).map(type => type.to = proxy(type.to, limit))
+  values(ripple.types).map(type => type.from = proxy(type.from, track(ripple)))
   ripple.io.use((socket, next) => { socket.deps = {}, next() })
   return ripple
 }
@@ -31,6 +31,7 @@ function start(ripple){
   load(ripple)
   ready(ripple.draw)
   if (customs) ready(polytop(ripple))
+  else ready(d => all('*').filter(by('nodeName', includes('-'))).map(ripple.draw))
   return ripple
 }
 
@@ -93,8 +94,7 @@ function format(arr){
     .map(lo)
     .map(split(' '))
     .reduce(flatten, [])
-    .reduce(unique, '')
-    .filter(Boolean)
+    .filter(unique)
 }
 
 function loaded(ripple){
@@ -119,19 +119,29 @@ function ready(fn){
   return document.body ? fn() : document.addEventListener('DOMContentLoaded', d => fn())
 }
 
-import identity from 'utilise/identity'
+import { default as from} from 'utilise/from'
+import includes from 'utilise/includes'
+import debounce from 'utilise/debounce'
+import flatten from 'utilise/flatten'
+import unique from 'utilise/unique'
 import values from 'utilise/values'
 import client from 'utilise/client'
 import proxy from 'utilise/proxy'
 import group from 'utilise/group'
+import parse from 'utilise/parse'
+import split from 'utilise/split'
+import attr from 'utilise/attr'
 import noop from 'utilise/noop'
 import not from 'utilise/not'
-import log from 'utilise/log'
-import err from 'utilise/err'
+import all from 'utilise/all'
+import key from 'utilise/key'
 import is from 'utilise/is'
-log = log('[ri/backpressure]')
-err = err('[ri/backpressure]')
-var shadows = client && !!document.head.createShadowRoot
+import by from 'utilise/by'
+import to from 'utilise/to'
+import lo from 'utilise/lo'
+var log = require('utilise/log')('[ri/backpressure]')
+  , err = require('utilise/err')('[ri/backpressure]')
+  , shadows = client && !!document.head.createShadowRoot
   , customs = client && !!document.registerElement
   , loading = true
   , debug = noop

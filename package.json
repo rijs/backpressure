@@ -3,32 +3,36 @@
   "version": "0.0.4",
   "main": "dist",
   "author": "Pedram Emrouznejad (https://github.com/pemrouz)",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rijs/backpressure.git"
+  },
   "scripts": {
+    "ignore": "find ./dist -type f -exec sed -i \"s/var _interopRequire/\\/* istanbul ignore next *\\/\\nvar _interopRequire/g\" {} ';'",
     "babel": "babel src -d dist",
-    "bundle": "browserify dist/index.js -o dist/client.js",
     "clean": "rm -rf dist && mkdir dist",
-    "minify": "uglifyjs dist/client.js -m -c drop_console,dead_code -d debug=false -o dist/client.min.js",
-    "build": "npm run clean && npm run babel && npm run bundle && npm run minify",
+    "build": "npm run clean && npm run babel && npm run ignore",
     "test": "popper",
     "version": "npm run build && git add -A",
     "postversion": "git push && git push --tags"
   },
   "license": "pemrouz.mit-license.org",
   "devDependencies": {
-    "babel": "^4.6.3",
-    "browserify": "^9.0.3",
-    "chai": "^2.3.0",
-    "coveralls": "^2.11.2",
+    "babel-cli": "*",
+    "babel-preset-es2015": "*",
+    "browserify": "*",
+    "chai": "*",
+    "coveralls": "*",
     "popper": "*",
     "rijs.components": "*",
     "rijs.core": "*",
-    "rijs.data": "*",
     "rijs.css": "*",
+    "rijs.data": "*",
     "rijs.fn": "*",
     "rijs.serve": "*",
     "rijs.shadow": "*",
     "rijs.sync": "*",
-    "uglify-js": "^2.4.16"
+    "uglify-js": "*"
   },
   "dependencies": {
     "utilise": "*"
