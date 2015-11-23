@@ -13,11 +13,10 @@ var expect       = require('chai').expect
   , container    = document.createElement('div')
   , ripple       
   , temp
-
 describe('Backpressure', function(){
 
   before(function(){
-    localStorage.ripple = str([{ name: 'cached' }])
+    localStorage.ripple = str([{ name: 'array' }])
     ripple = backpressure(sync(components(css(fn(data(core()))))))
     document.body.appendChild(container)
   })
@@ -39,8 +38,8 @@ describe('Backpressure', function(){
   })
 
   it('should refresh resources in cache', function(){  
-    expect(keys(ripple.resources)).to.eql(['cached'])
-    expect(ripple('cached')).to.eql({ loading: true })
+    expect(keys(ripple.resources)).to.eql(['array'])
+    expect(ripple('array')).to.eql([{i:0}, {i:1},{i:2}])
   })
 
   it('should do nothing if no io', function(){  

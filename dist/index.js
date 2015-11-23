@@ -109,14 +109,15 @@ function backpressure(ripple) {
 }
 
 function draw(ripple) {
-  var refresh = (0, _debounce2.default)(10)(function (d) {
+  var refresh = function refresh(d) {
     return (0, _all2.default)(':unresolved').map(ripple.draw);
-  });
-  return function (d) {
+  };
+  return function (next) {
     return function (thing) {
-      var everything = !thing && (!this || !this.nodeName && !this.node);
-      if (shadows || customs && everything) refresh();
-      return d.apply(this, arguments);
+      var everything = !thing && (!this || !this.nodeName && !this.node),
+          ret = next.apply(this, arguments);
+      if (shadows || customs && everything) raf(refresh);
+      return ret;
     };
   };
 }
@@ -147,12 +148,12 @@ function track(ripple) {
   return function (_ref) {
     var name = _ref.name;
     var body = _ref.body;
+    var headers = _ref.headers;
 
     var exists = name in this.deps;
     this.deps[name] = 1;
     if (!exists) ripple.sync(this)(name);
-    if (body.loading) return false;
-    return true;
+    return !headers.pull;
   };
 }
 
@@ -160,7 +161,9 @@ function load(ripple) {
   (0, _group2.default)('pulling cache', function (fn) {
     return ((0, _parse2.default)(localStorage.ripple) || []).map(function (_ref2) {
       var name = _ref2.name;
-      return ripple(name, { loading: loading });
+      return log(name);
+    }).map(function (name) {
+      return ripple.io.emit('change', { name: name, headers: headers });
     });
   });
 }
@@ -192,13 +195,11 @@ function loaded(ripple) {
     return function (el) {
       var deps = ripple.deps(el);
 
-      deps.filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
+      return deps.filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
         return debug('pulling', name), name;
       }).map(function (name) {
-        return ripple(name, { loading: loading });
-      });
-
-      return deps.map((0, _from2.default)(ripple.resources)).every((0, _not2.default)((0, _key2.default)('body.loading'))) ? render(el) : false;
+        return ripple.io.emit('change', { name: name, headers: headers });
+      }).length ? false : render(el);
     };
   };
 }
@@ -213,5 +214,7 @@ var log = require('utilise/log')('[ri/backpressure]'),
     err = require('utilise/err')('[ri/backpressure]'),
     shadows = _client2.default && !!document.head.createShadowRoot,
     customs = _client2.default && !!document.registerElement,
-    loading = true,
+    raf = _client2.default && requestAnimationFrame,
+    pull = true,
+    headers = { 'content-type': 'text/plain', pull: pull },
     debug = _noop2.default;

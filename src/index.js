@@ -16,13 +16,15 @@ export default function backpressure(ripple){
   return ripple
 }
 
+
 function draw(ripple){
-  var refresh = debounce(10)(d => all(':unresolved').map(ripple.draw))
-  return d => {
+  var refresh = d => all(':unresolved').map(ripple.draw)
+  return next => {
     return function(thing) {
       var everything = !thing && (!this || (!this.nodeName && !this.node))
-      if (shadows || (customs && everything)) refresh()
-      return d.apply(this, arguments)
+        , ret = next.apply(this, arguments)
+      if (shadows || (customs && everything)) raf(refresh)
+      return ret
     }
   }
 }
@@ -50,22 +52,21 @@ function drawNodes(ripple) {
 }
 
 function track(ripple){ 
-  return function({ name, body }) { 
+  return function({ name, body, headers }) { 
     var exists = name in this.deps
     this.deps[name] = 1
     if (!exists) ripple.sync(this)(name)
-    if (body.loading) return false
-    return true
+    return !headers.pull
   }
 }
 
 function load(ripple) {
   group('pulling cache', fn =>
     (parse(localStorage.ripple) || [])
-      .map(({ name }) => ripple(name, { loading }))
+      .map(({ name }) => log(name))
+      .map(name => ripple.io.emit('change', { name, headers }))
   )
 }
-
 
 function untrack(ripple){
   return function(names) {
@@ -97,20 +98,17 @@ function format(arr){
     .filter(unique)
 }
 
+
 function loaded(ripple){
   return render => {
     return el => {
       var deps = ripple.deps(el)
 
-      deps
+      return deps
         .filter(not(is.in(ripple.resources)))
         .map(name => (debug('pulling', name), name))
-        .map(name => ripple(name, { loading }))
-
-      return deps
-        .map(from(ripple.resources))
-        .every(not(key('body.loading')))
-          ? render(el) : false
+        .map(name => ripple.io.emit('change', { name, headers }))
+        .length ? false : render(el)
     }
   }
 }
@@ -143,5 +141,7 @@ var log = require('utilise/log')('[ri/backpressure]')
   , err = require('utilise/err')('[ri/backpressure]')
   , shadows = client && !!document.head.createShadowRoot
   , customs = client && !!document.registerElement
-  , loading = true
+  , raf = client && requestAnimationFrame
+  , pull = true
+  , headers = { 'content-type': 'text/plain', pull }
   , debug = noop
