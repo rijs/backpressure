@@ -18,7 +18,11 @@ export default function backpressure(ripple){
 
 
 function draw(ripple){
-  var refresh = d => all(':unresolved').map(ripple.draw)
+  var refresh = d => all(':unresolved')
+    .filter(not(key('requested')))
+    .map(key('requested', true))
+    .map(ripple.draw)
+
   return next => {
     return function(thing) {
       var everything = !thing && (!this || (!this.nodeName && !this.node))

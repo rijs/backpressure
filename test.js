@@ -74,6 +74,15 @@ describe('Backpressure', function(){
     container.innerHTML = '<dynamic-el></dynamic-el>'
   })
 
+  it('should not loop infinitely on non-existent resources', function(done){  
+    time(200, function() {
+      expect(container.firstChild.requested).to.be.ok
+      done()
+    })
+    expect(keys(ripple.resources)).to.eql([])
+    container.innerHTML = '<non-existent></non-existent>'
+  })
+
   it('should work with shadow boundaries', function(done){  
     shadow(ripple)
 
@@ -86,5 +95,7 @@ describe('Backpressure', function(){
     expect(keys(ripple.resources)).to.eql([])
     container.innerHTML = '<shadow-el></shadow-el>'
   })
+
+
 
 })

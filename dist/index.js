@@ -110,8 +110,9 @@ function backpressure(ripple) {
 
 function draw(ripple) {
   var refresh = function refresh(d) {
-    return (0, _all2.default)(':unresolved').map(ripple.draw);
+    return (0, _all2.default)(':unresolved').filter((0, _not2.default)((0, _key2.default)('requested'))).map((0, _key2.default)('requested', true)).map(ripple.draw);
   };
+
   return function (next) {
     return function (thing) {
       var everything = !thing && (!this || !this.nodeName && !this.node),
