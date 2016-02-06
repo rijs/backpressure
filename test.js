@@ -81,6 +81,7 @@ describe('Backpressure', function(){
     })
     expect(keys(ripple.resources)).to.eql([])
     container.innerHTML = '<non-existent></non-existent>'
+    ripple.draw(container.firstChild)
   })
 
   it('should work with shadow boundaries', function(done){  
