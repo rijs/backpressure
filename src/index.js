@@ -117,10 +117,6 @@ function loaded(ripple){
   }
 }
 
-function ready(fn){
-  return document.body ? fn() : document.addEventListener('DOMContentLoaded', d => fn())
-}
-
 import { default as from} from 'utilise/from'
 import includes from 'utilise/includes'
 import debounce from 'utilise/debounce'
@@ -128,6 +124,7 @@ import flatten from 'utilise/flatten'
 import unique from 'utilise/unique'
 import values from 'utilise/values'
 import client from 'utilise/client'
+import ready from 'utilise/ready'
 import proxy from 'utilise/proxy'
 import group from 'utilise/group'
 import parse from 'utilise/parse'
