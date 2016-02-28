@@ -1,102 +1,157 @@
-var expect       = require('chai').expect
-  , debounce     = require('utilise/debounce')
-  , time         = require('utilise/time')
-  , str          = require('utilise/str')
-  , components   = require('rijs.components').default
-  , core         = require('rijs.core').default
-  , data         = require('rijs.data').default
-  , css          = require('rijs.css').default
-  , fn           = require('rijs.fn').default
-  , sync         = require('rijs.sync').default
-  , shadow       = require('rijs.shadow').default
-  , backpressure = require('./').default
-  , container    = document.createElement('div')
-  , ripple       
-  , temp
-describe('Backpressure', function(){
+var core     = require('rijs.core').default
+  , data     = require('rijs.data').default
+  , sync     = require('rijs.sync').default
+  , back     = require('./').default
+  , includes = require('utilise/includes')
+  , update   = require('utilise/update')
+  , remove   = require('utilise/remove')
+  , clone    = require('utilise/clone')
+  , falsy    = require('utilise/falsy')
+  , push     = require('utilise/push')
+  , noop     = require('utilise/noop')
+  , key      = require('utilise/key')
+  , pop      = require('utilise/pop')
+  , str      = require('utilise/str')
+  , not      = require('utilise/not')
+  , expect   = require('chai').expect
+  , mockery  = require('mockery')
+  , request  = { headers: { 'x-forwarded-for': 10 }}
+  , socket   = { emit: function(type, data){ return socket.emitted = emitted = [type, data]}, request: request}
+  , other    = { emit: function(type, data){ return other.emitted = [type, data]}, request: request }
+  , sockets, opts, emitted, connection, receive
 
-  before(function(){
-    localStorage.ripple = str([{ name: 'array' }])
-    ripple = backpressure(sync(components(css(fn(data(core()))))))
-    document.body.appendChild(container)
+describe('Sync', function(){
+
+  before(function(){ 
+    mockery.enable()
+    mockery.registerMock('socket.io', sio)
   })
 
-  beforeEach(function(done){ 
-    container.innerHTML = ''
-    ripple.io.emit('beforeEach')
-    ripple.io.once('done', debounce(done))
+  beforeEach(function(){
+    opts = emitted = socket.emitted = other.emitted = null
+    sockets = [socket, other]
   })
 
-  afterEach(function(){
-    temp && ripple.io.off('change', temp)
-    keys(ripple.resources)
-      .map(function(name){ delete ripple.resources[name] })
+  after(function(){ 
+    mockery.disable()
   })
 
-  after(function(){
-    document.body.removeChild(container)
+  it('should initialise correctly', function(){  
+    var ripple = back(data(core()))
+    expect(ripple.io).to.be.not.ok
+    expect(ripple.to).to.be.not.ok
+    expect(ripple.from).to.be.not.ok
+  
+    var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
+    expect(ripple.io).to.be.ok
+    expect(ripple.to).to.be.a('function')
+    expect(ripple.from).to.be.a('function')
   })
 
-  it('should refresh resources in cache', function(){  
-    expect(keys(ripple.resources)).to.eql(['array'])
-    expect(ripple('array')).to.eql([{i:0}, {i:1},{i:2}])
+  it('should stream new resource', function(){  
+    var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
+    expect(socket.deps).to.be.eql({})
+    expect(other.deps).to.be.eql({})
+    ripple('foo', { foo: 'bar' }) 
+    expect(other.emitted).to.be.not.ok
+    expect(socket.emitted).to.be.not.ok
   })
 
-  it('should do nothing if no io', function(){  
-    expect(backpressure({})).to.be.ok
+ it('should ripple(!) changes - efficiently', function(){  
+    var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
+
+    receive.call(socket, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    expect(socket.deps).to.be.eql({ foo: 1 })
+    expect(other.deps).to.be.eql({})
+    
+    // should not oversend
+    ripple('foo', { foo: 'bar' }) 
+    expect(socket.emitted).to.be.eql(['change', ['foo', { type: 'update', value: { foo: 'bar' }}]])
+    expect(other.emitted).to.be.not.ok
+    socket.emitted = other.emitted = null
+
+    // subsequent changes should ripple
+    receive.call({ deps: {}}, ['foo', { type: 'update', value: { foo: 'baz' }}]) 
+    expect(ripple.resources.foo.body).to.be.eql({ foo: 'baz' })
+    expect(socket.emitted).to.be.eql(['change', ['foo', { type: 'update', value: { foo: 'baz' }}]])
+    expect(other.emitted).to.be.not.ok
   })
 
-  it('should not load any resources by default', function(){  
-    expect(keys(ripple.resources)).to.eql([])
+  it('should always send if pull request', function(){  
+    var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
+    other.deps = { foo: 1 }
+
+    ripple('foo', { foo: 'bar' }) 
+    receive.call(other, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    expect(other.emitted).to.be.eql(['change', ['foo', false, { name: 'foo', body: { foo: 'bar' }, headers: { 'content-type': 'application/data' }}]])
+    expect(socket.emitted).to.be.not.ok
   })
 
-  it('should load only used resources', function(done){  
-    ripple.io.on('change', temp = debounce()(function(){
-      expect(keys(ripple.resources).sort()).to.eql(['array', 'my-component', 'some.css'])
-      expect(ripple('array')).to.be.a('array')
-      expect(ripple('my-component')).to.be.a('function')
-      expect(ripple('some.css')).to.be.a('string')
-      done()
-    }))
+  it('should respect existing transforms (outgoing - block)', function(){  
+    var ripple = sync(data(core()), { server: { foo: 'bar' }})
+    ripple.to = falsy
+    ripple = back(ripple)
 
-    expect(keys(ripple.resources)).to.eql([])
-    container.innerHTML = '<my-component data="array" css="some.css"></my-component>'
+    receive.call(socket, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    expect(socket.deps).to.be.eql({ foo: 1 })
+    expect(other.deps).to.be.eql({})
+    
+    ripple('foo', { foo: 'bar' }) 
+    expect(socket.emitted).to.be.not.ok
+    expect(other.emitted).to.be.not.ok
+    socket.emitted = other.emitted = null
+  })
+  
+  it('should respect existing transforms (outgoing - pass through)', function(){  
+    var ripple = sync(data(core()), { server: { foo: 'bar' }})
+    ripple.to = not(falsy)
+    ripple = back(ripple)
+
+    receive.call(socket, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    expect(socket.deps).to.be.eql({ foo: 1 })
+    expect(other.deps).to.be.eql({})
+    
+    ripple('foo', { foo: 'bar' }) 
+    expect(socket.emitted).to.be.eql(['change', ['foo', { type: 'update', value: { foo: 'bar' }}]])
+    expect(other.emitted).to.be.not.ok
+    socket.emitted = other.emitted = null
   })
 
-  it('should work with deeply nested elements', function(done){  
-    ripple.io.on('change', temp = debounce()(function(){
-      expect(keys(ripple.resources).sort()).to.eql(['array', 'dynamic-el', 'my-component', 'some.css'])
-      done()
-    }))
+  it('should respect existing transforms (incoming - block)', function(){  
+    var ripple = sync(data(core()), { server: { foo: 'bar' }})
+    ripple.from = falsy
+    ripple = back(ripple)
 
-    expect(keys(ripple.resources)).to.eql([])
-    ripple('dynamic-el', function(d){ this.innerHTML = '<my-component data="array" css="some.css"></my-component>' })
-    container.innerHTML = '<dynamic-el></dynamic-el>'
+    receive.call({ deps: {}}, ['foo', { type: 'update', value: { foo: 'baz' }}]) 
+    expect(ripple.resources.foo).to.be.not.ok
+    expect(socket.emitted).to.be.not.ok
+    expect(other.emitted).to.be.not.ok
   })
+  
+  it('should respect existing transforms (incoming - pass through)', function(){  
+    var ripple = sync(data(core()), { server: { foo: 'bar' }})
+    ripple.from = not(falsy)
+    ripple = back(ripple)
 
-  it('should not loop infinitely on non-existent resources', function(done){  
-    time(200, function() {
-      expect(container.firstChild.requested).to.be.ok
-      done()
-    })
-    expect(keys(ripple.resources)).to.eql([])
-    container.innerHTML = '<non-existent></non-existent>'
-    ripple.draw(container.firstChild)
+    receive.call({ deps: {}}, ['foo', { type: 'update', value: { foo: 'baz' }}]) 
+    expect(ripple.resources.foo.body).to.be.eql({ foo: 'baz' })
+    expect(socket.emitted).to.be.not.ok
+    expect(other.emitted).to.be.not.ok
   })
-
-  it('should work with shadow boundaries', function(done){  
-    shadow(ripple)
-
-    time(250, function(){ 
-      expect(keys(ripple.resources).sort()).to.eql(['array', 'my-component', 'shadow-el', 'some.css'])
-      expect(container.firstChild.shadowRoot.firstChild.nodeName).to.eql('MY-COMPONENT')
-      done()
-    })
-
-    expect(keys(ripple.resources)).to.eql([])
-    container.innerHTML = '<shadow-el></shadow-el>'
-  })
-
-
 
 })
+
+function sio(o){
+  opts = o
+  return {
+    use: function(fn){
+      sockets.map(function(s){ fn(s, noop) })
+    }
+  , on: function(type, fn){
+      if (type === 'change') receive = fn
+      if (type === 'connection' && includes('change')(str(fn))) fn({ on: noop })
+      if (type === 'connection') connection = fn
+  }
+  , of: function(){ return { sockets: sockets } }
+  }
+}

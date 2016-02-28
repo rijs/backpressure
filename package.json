@@ -8,11 +8,14 @@
     "url": "git://github.com/rijs/backpressure.git"
   },
   "scripts": {
-    "ignore": "find ./dist -type f -exec sed -i \"s/var _interopRequire/\\/* istanbul ignore next *\\/\\nvar _interopRequire/g\" {} ';'",
+    "ignore": "find ./dist -type f -exec sed -i -E \"s/(function _interopRequire|^.*?ripple.render|^.*?var (log|load|start|deps|draw|polytop|drawNodes|format))/\\/* istanbul ignore next *\\/\\n\\1/g\" {} ';'",
     "babel": "babel src -d dist",
     "clean": "rm -rf dist && mkdir dist",
     "build": "npm run clean && npm run babel && npm run ignore",
-    "test": "popper",
+    "test": "istanbul test ./node_modules/mocha/bin/_mocha --report html -- -R spec",
+    "coverage": "istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && rm -rf ./coverage",
+    "cov": "istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec",
+    "test-popper": "popper",
     "version": "npm run build && git add -A",
     "postversion": "git push && git push --tags"
   },
@@ -23,6 +26,7 @@
     "browserify": "*",
     "chai": "*",
     "coveralls": "*",
+    "mockery": "^1.4.0",
     "popper": "*",
     "rijs.components": "*",
     "rijs.core": "*",

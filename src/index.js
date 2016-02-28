@@ -3,37 +3,33 @@
 // -------------------------------------------
 export default function backpressure(ripple){
   log('creating')
-
   if (!ripple.io) return ripple
-  if (client) return (ripple.draw = draw(ripple)(ripple.draw))
-                   , (ripple.render = loaded(ripple)(ripple.render))
+  if (client) return (ripple.render = loaded(ripple)(ripple.render))
+                   , (ripple.draw = draw(ripple)(ripple.draw))
                    , (ripple.deps = deps)
                    , (start(ripple))
 
-  values(ripple.types).map(type => type.to = proxy(type.to, limit))
-  values(ripple.types).map(type => type.from = proxy(type.from, track(ripple)))
+  ripple.to = limit(ripple.to)
+  ripple.from = track(ripple)(ripple.from)
   ripple.io.use((socket, next) => { socket.deps = {}, next() })
   return ripple
 }
 
-
-function draw(ripple){
-  var refresh = d => all(':unresolved')
+const draw = ripple => {
+  const refresh = d => all(':unresolved')
     .filter(not(key('requested')))
     .map(key('requested', true))
     .map(ripple.draw)
 
-  return next => {
-    return function(thing) {
-      var everything = !thing && (!this || (!this.nodeName && !this.node))
-        , ret = next.apply(this, arguments)
-      if (shadows || (customs && everything)) raf(refresh)
-      return ret
-    }
+  return next => function(thing) {
+    const everything = !thing && (!this || (!this.nodeName && !this.node))
+        , ret = next.apply(this, thing instanceof Event ? [] : arguments)
+    if (shadows || (customs && everything)) raf(refresh)
+    return ret
   }
 }
 
-function start(ripple){
+const start = ripple => {
   load(ripple)
   ready(ripple.draw)
   if (customs) ready(polytop(ripple))
@@ -41,83 +37,59 @@ function start(ripple){
   return ripple
 }
 
-function polytop(ripple){
+const polytop = ripple => {
   var muto = new MutationObserver(drawNodes(ripple))
   return d => muto.observe(document.body, { childList: true, subtree: true })
 }
 
-function drawNodes(ripple) {
-  return mutations => mutations
-    .map(key('addedNodes'))
-    .map(to.arr)
-    .reduce(flatten, [])
-    .filter(by('nodeName', includes('-')))
-    .map(ripple.draw)
+const drawNodes = ripple => mutations => mutations
+  .map(key('addedNodes'))
+  .map(to.arr)
+  .reduce(flatten, [])
+  .filter(by('nodeName', includes('-')))
+  .map(ripple.draw)
+
+const track = ripple => next => function(res, { name, headers }){ 
+  const exists = name in this.deps
+
+  if (!headers || !headers.pull) return next ? next.apply(this, arguments) : true
+  return this.deps[name] = 1
+       , ripple.stream(this)(name)
+       , false
 }
 
-function track(ripple){ 
-  return function({ name, body, headers }) { 
-    var exists = name in this.deps
-    this.deps[name] = 1
-    if (!exists) ripple.sync(this)(name)
-    return !headers.pull
-  }
-}
+const load = ripple => group('pulling cache', fn =>
+  (parse(localStorage.ripple) || [])
+    .map(({ name }) => log(name))
+    .map(name => ripple.io.emit('change', [name, { name, headers }])))
 
-function load(ripple) {
-  group('pulling cache', fn =>
-    (parse(localStorage.ripple) || [])
-      .map(({ name }) => log(name))
-      .map(name => ripple.io.emit('change', { name, headers }))
-  )
-}
-
-function untrack(ripple){
-  return function(names) {
-    delete this[name]
-  }
-}
-
-function limit(res){ 
-  return res.name in this.deps
-       ? res 
+const limit = next => function(res){
+  return res.name in this.deps 
+       ? (next ? next.apply(this, arguments) : res)
        : false
 }
 
-function deps(el){
-  return format([ 
+const deps = el => format([ 
     key('nodeName')
   , attr('data')
   , attr('css')
   ])(el)
-}
 
-function format(arr){
-  return el => arr
-    .map(fn => fn(el))
-    .filter(Boolean)
-    .map(lo)
-    .map(split(' '))
-    .reduce(flatten, [])
-    .filter(unique)
-}
+const format = arr => el => arr
+  .map(extract => extract(el))
+  .filter(Boolean)
+  .map(lo)
+  .map(split(' '))
+  .reduce(flatten, [])
+  .filter(unique)
 
+const loaded = ripple => render => el => ripple.deps(el)
+  .filter(not(is.in(ripple.resources)))
+  .map(name => (debug('pulling', name), name))
+  .map(name => ripple.io.emit('change', [name, { headers }]))
+  .length ? false : render(el)
 
-function loaded(ripple){
-  return render => {
-    return el => {
-      var deps = ripple.deps(el)
-
-      return deps
-        .filter(not(is.in(ripple.resources)))
-        .map(name => (debug('pulling', name), name))
-        .map(name => ripple.io.emit('change', { name, headers }))
-        .length ? false : render(el)
-    }
-  }
-}
-
-import { default as from} from 'utilise/from'
+import { default as from } from 'utilise/from'
 import includes from 'utilise/includes'
 import debounce from 'utilise/debounce'
 import flatten from 'utilise/flatten'
@@ -138,11 +110,10 @@ import is from 'utilise/is'
 import by from 'utilise/by'
 import to from 'utilise/to'
 import lo from 'utilise/lo'
-var log = require('utilise/log')('[ri/backpressure]')
-  , err = require('utilise/err')('[ri/backpressure]')
-  , shadows = client && !!document.head.createShadowRoot
-  , customs = client && !!document.registerElement
-  , raf = client && requestAnimationFrame
-  , pull = true
-  , headers = { 'content-type': 'text/plain', pull }
-  , debug = noop
+const log = require('utilise/log')('[ri/backpressure]')
+    , err = require('utilise/err')('[ri/backpressure]')
+    , shadows = client && !!document.head.createShadowRoot
+    , customs = client && !!document.registerElement
+    , raf = client && requestAnimationFrame
+    , headers = { pull: true }
+    , debug = noop

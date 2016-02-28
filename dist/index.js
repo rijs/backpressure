@@ -33,6 +33,10 @@ var _client = require('utilise/client');
 
 var _client2 = _interopRequireDefault(_client);
 
+var _ready = require('utilise/ready');
+
+var _ready2 = _interopRequireDefault(_ready);
+
 var _proxy = require('utilise/proxy');
 
 var _proxy2 = _interopRequireDefault(_proxy);
@@ -85,6 +89,7 @@ var _lo = require('utilise/lo');
 
 var _lo2 = _interopRequireDefault(_lo);
 
+/* istanbul ignore next */
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // -------------------------------------------
@@ -92,23 +97,20 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 // -------------------------------------------
 function backpressure(ripple) {
   log('creating');
-
   if (!ripple.io) return ripple;
-  if (_client2.default) return ripple.draw = draw(ripple)(ripple.draw), ripple.render = loaded(ripple)(ripple.render), ripple.deps = deps, start(ripple);
+/* istanbul ignore next */
+  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.draw = draw(ripple)(ripple.draw), ripple.deps = deps, start(ripple);
 
-  (0, _values2.default)(ripple.types).map(function (type) {
-    return type.to = (0, _proxy2.default)(type.to, limit);
-  });
-  (0, _values2.default)(ripple.types).map(function (type) {
-    return type.from = (0, _proxy2.default)(type.from, track(ripple));
-  });
+  ripple.to = limit(ripple.to);
+  ripple.from = track(ripple)(ripple.from);
   ripple.io.use(function (socket, next) {
     socket.deps = {}, next();
   });
   return ripple;
 }
 
-function draw(ripple) {
+/* istanbul ignore next */
+var draw = function draw(ripple) {
   var refresh = function refresh(d) {
     return (0, _all2.default)(':unresolved').filter((0, _not2.default)((0, _key2.default)('requested'))).map((0, _key2.default)('requested', true)).map(ripple.draw);
   };
@@ -116,106 +118,102 @@ function draw(ripple) {
   return function (next) {
     return function (thing) {
       var everything = !thing && (!this || !this.nodeName && !this.node),
-          ret = next.apply(this, arguments);
+          ret = next.apply(this, thing instanceof Event ? [] : arguments);
       if (shadows || customs && everything) raf(refresh);
       return ret;
     };
   };
-}
+};
 
-function start(ripple) {
+/* istanbul ignore next */
+var start = function start(ripple) {
   load(ripple);
-  ready(ripple.draw);
-  if (customs) ready(polytop(ripple));else ready(function (d) {
+  (0, _ready2.default)(ripple.draw);
+  if (customs) (0, _ready2.default)(polytop(ripple));else (0, _ready2.default)(function (d) {
     return (0, _all2.default)('*').filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).map(ripple.draw);
   });
   return ripple;
-}
+};
 
-function polytop(ripple) {
+/* istanbul ignore next */
+var polytop = function polytop(ripple) {
   var muto = new MutationObserver(drawNodes(ripple));
   return function (d) {
     return muto.observe(document.body, { childList: true, subtree: true });
   };
-}
+};
 
-function drawNodes(ripple) {
+/* istanbul ignore next */
+var drawNodes = function drawNodes(ripple) {
   return function (mutations) {
     return mutations.map((0, _key2.default)('addedNodes')).map(_to2.default.arr).reduce(_flatten2.default, []).filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).map(ripple.draw);
   };
-}
+};
 
-function track(ripple) {
-  return function (_ref) {
-    var name = _ref.name;
-    var body = _ref.body;
-    var headers = _ref.headers;
+var track = function track(ripple) {
+  return function (next) {
+    return function (res, _ref) {
+      var name = _ref.name;
+      var headers = _ref.headers;
 
-    var exists = name in this.deps;
-    this.deps[name] = 1;
-    if (!exists) ripple.sync(this)(name);
-    return !headers.pull;
+      var exists = name in this.deps;
+
+      if (!headers || !headers.pull) return next ? next.apply(this, arguments) : true;
+      return this.deps[name] = 1, ripple.stream(this)(name), false;
+    };
   };
-}
+};
 
-function load(ripple) {
-  (0, _group2.default)('pulling cache', function (fn) {
+/* istanbul ignore next */
+var load = function load(ripple) {
+  return (0, _group2.default)('pulling cache', function (fn) {
     return ((0, _parse2.default)(localStorage.ripple) || []).map(function (_ref2) {
       var name = _ref2.name;
       return log(name);
     }).map(function (name) {
-      return ripple.io.emit('change', { name: name, headers: headers });
+      return ripple.io.emit('change', [name, { name: name, headers: headers }]);
     });
   });
-}
+};
 
-function untrack(ripple) {
-  return function (names) {
-    delete this[name];
+var limit = function limit(next) {
+  return function (res) {
+    return res.name in this.deps ? next ? next.apply(this, arguments) : res : false;
   };
-}
+};
 
-function limit(res) {
-  return res.name in this.deps ? res : false;
-}
-
-function deps(el) {
+/* istanbul ignore next */
+var deps = function deps(el) {
   return format([(0, _key2.default)('nodeName'), (0, _attr2.default)('data'), (0, _attr2.default)('css')])(el);
-}
+};
 
-function format(arr) {
+/* istanbul ignore next */
+var format = function format(arr) {
   return function (el) {
-    return arr.map(function (fn) {
-      return fn(el);
+    return arr.map(function (extract) {
+      return extract(el);
     }).filter(Boolean).map(_lo2.default).map((0, _split2.default)(' ')).reduce(_flatten2.default, []).filter(_unique2.default);
   };
-}
+};
 
-function loaded(ripple) {
+/* istanbul ignore next */
+var loaded = function loaded(ripple) {
   return function (render) {
     return function (el) {
-      var deps = ripple.deps(el);
-
-      return deps.filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
+      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
         return debug('pulling', name), name;
       }).map(function (name) {
-        return ripple.io.emit('change', { name: name, headers: headers });
+        return ripple.io.emit('change', [name, { headers: headers }]);
       }).length ? false : render(el);
     };
   };
-}
+};
 
-function ready(fn) {
-  return document.body ? fn() : document.addEventListener('DOMContentLoaded', function (d) {
-    return fn();
-  });
-}
-
+/* istanbul ignore next */
 var log = require('utilise/log')('[ri/backpressure]'),
     err = require('utilise/err')('[ri/backpressure]'),
     shadows = _client2.default && !!document.head.createShadowRoot,
     customs = _client2.default && !!document.registerElement,
     raf = _client2.default && requestAnimationFrame,
-    pull = true,
-    headers = { 'content-type': 'text/plain', pull: pull },
+    headers = { pull: true },
     debug = _noop2.default;
