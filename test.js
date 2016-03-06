@@ -60,7 +60,7 @@ describe('Sync', function(){
  it('should ripple(!) changes - efficiently', function(){  
     var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
 
-    receive.call(socket, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    receive.call(socket, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
     expect(socket.deps).to.be.eql({ foo: 1 })
     expect(other.deps).to.be.eql({})
     
@@ -82,7 +82,7 @@ describe('Sync', function(){
     other.deps = { foo: 1 }
 
     ripple('foo', { foo: 'bar' }) 
-    receive.call(other, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    receive.call(other, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
     expect(other.emitted).to.be.eql(['change', ['foo', false, { name: 'foo', body: { foo: 'bar' }, headers: { 'content-type': 'application/data' }}]])
     expect(socket.emitted).to.be.not.ok
   })
@@ -92,7 +92,7 @@ describe('Sync', function(){
     ripple.to = falsy
     ripple = back(ripple)
 
-    receive.call(socket, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    receive.call(socket, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
     expect(socket.deps).to.be.eql({ foo: 1 })
     expect(other.deps).to.be.eql({})
     
@@ -107,7 +107,7 @@ describe('Sync', function(){
     ripple.to = not(falsy)
     ripple = back(ripple)
 
-    receive.call(socket, ['foo', { name: 'foo', headers: { pull: true }}]) 
+    receive.call(socket, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
     expect(socket.deps).to.be.eql({ foo: 1 })
     expect(other.deps).to.be.eql({})
     

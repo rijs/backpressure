@@ -13,10 +13,6 @@ var _includes = require('utilise/includes');
 
 var _includes2 = _interopRequireDefault(_includes);
 
-var _debounce = require('utilise/debounce');
-
-var _debounce2 = _interopRequireDefault(_debounce);
-
 var _flatten = require('utilise/flatten');
 
 var _flatten2 = _interopRequireDefault(_flatten);
@@ -37,17 +33,9 @@ var _ready = require('utilise/ready');
 
 var _ready2 = _interopRequireDefault(_ready);
 
-var _proxy = require('utilise/proxy');
-
-var _proxy2 = _interopRequireDefault(_proxy);
-
 var _group = require('utilise/group');
 
 var _group2 = _interopRequireDefault(_group);
-
-var _parse = require('utilise/parse');
-
-var _parse2 = _interopRequireDefault(_parse);
 
 var _split = require('utilise/split');
 
@@ -80,10 +68,6 @@ var _is2 = _interopRequireDefault(_is);
 var _by = require('utilise/by');
 
 var _by2 = _interopRequireDefault(_by);
-
-var _to = require('utilise/to');
-
-var _to2 = _interopRequireDefault(_to);
 
 var _lo = require('utilise/lo');
 
@@ -120,14 +104,15 @@ var pull = function pull(el) {
 
 var track = function track(ripple) {
   return function (next) {
-    return function (res, _ref) {
+    return function (_ref) {
       var name = _ref.name;
       var headers = _ref.headers;
 
       var exists = name in this.deps;
-
       if (!headers || !headers.pull) return next ? next.apply(this, arguments) : true;
-      return this.deps[name] = 1, ripple.stream(this)(name), false;
+      this.deps[name] = 1;
+      ripple.stream(this)(name);
+      return false;
     };
   };
 };
@@ -146,7 +131,7 @@ var refresh = function refresh(ripple) {
         var name = _ref3.name;
         return log(name);
       }).map(function (name) {
-        return ripple.io.emit('change', [name, { name: name, headers: headers }]);
+        return ripple.io.emit('change', [name, false, { name: name, headers: headers }]);
       });
     });
   };
@@ -179,7 +164,7 @@ var loaded = function loaded(ripple) {
       return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
         return debug('pulling', name), name;
       }).map(function (name) {
-        return ripple.io.emit('change', [name, { name: name, headers: headers }]);
+        return ripple.io.emit('change', [name, false, { name: name, headers: headers }]);
       }).length ? false : pull(render(el));
     };
   };
@@ -188,8 +173,5 @@ var loaded = function loaded(ripple) {
 /* istanbul ignore next */
 var log = require('utilise/log')('[ri/backpressure]'),
     err = require('utilise/err')('[ri/backpressure]'),
-    shadows = _client2.default && !!document.head.createShadowRoot,
-    customs = _client2.default && !!document.registerElement,
-    raf = _client2.default && requestAnimationFrame,
     headers = { pull: true },
     debug = _noop2.default;
