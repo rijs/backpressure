@@ -99,7 +99,7 @@ function backpressure(ripple) {
   log('creating');
   if (!ripple.io) return ripple;
 /* istanbul ignore next */
-  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.deps = deps, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple;
+  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.deps = deps, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple.io.on('reconnect', reconnect(ripple)), ripple;
 
   ripple.to = limit(ripple.to);
   ripple.from = track(ripple)(ripple.from);
@@ -132,11 +132,18 @@ var track = function track(ripple) {
   };
 };
 
+var reconnect = function reconnect(_ref2) {
+  var io = _ref2.io;
+  return function (d) {
+    return io.io.disconnect(), io.io.connect();
+  };
+};
+
 var refresh = function refresh(ripple) {
-  return function (connected) {
+  return function (d) {
     return (0, _group2.default)('refreshing', function (d) {
-      return (0, _values2.default)(ripple.resources).map(function (_ref2) {
-        var name = _ref2.name;
+      return (0, _values2.default)(ripple.resources).map(function (_ref3) {
+        var name = _ref3.name;
         return log(name);
       }).map(function (name) {
         return ripple.io.emit('change', [name, { name: name, headers: headers }]);

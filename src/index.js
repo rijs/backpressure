@@ -8,6 +8,7 @@ export default function backpressure(ripple){
                    , (ripple.deps = deps)
                    , ready(start(ripple))
                    , ripple.io.on('connect', refresh(ripple))
+                   , ripple.io.on('reconnect', reconnect(ripple))
                    , ripple
 
   ripple.to = limit(ripple.to)
@@ -33,7 +34,9 @@ const track = ripple => next => function(res, { name, headers }){
        , false
 }
 
-const refresh = ripple => connected => group('refreshing', d =>
+const reconnect = ({ io }) => d => (io.io.disconnect(), io.io.connect())
+
+const refresh = ripple => d => group('refreshing', d =>
   values(ripple.resources)
     .map(({ name }) => log(name))
     .map(name => ripple.io.emit('change', [name, { name, headers }])))
