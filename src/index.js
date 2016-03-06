@@ -5,9 +5,10 @@ export default function backpressure(ripple){
   log('creating')
   if (!ripple.io) return ripple
   if (client) return (ripple.render = loaded(ripple)(ripple.render))
-                   , (ripple.draw = draw(ripple)(ripple.draw))
                    , (ripple.deps = deps)
-                   , (start(ripple))
+                   , ready(start(ripple))
+                   , ripple.io.on('connect', refresh(ripple))
+                   , ripple
 
   ripple.to = limit(ripple.to)
   ripple.from = track(ripple)(ripple.from)
@@ -15,39 +16,13 @@ export default function backpressure(ripple){
   return ripple
 }
 
-const draw = ripple => {
-  const refresh = d => all(':unresolved')
-    .filter(not(key('requested')))
-    .map(key('requested', true))
-    .map(ripple.draw)
+const start = ripple => pull
 
-  return next => function(thing) {
-    const everything = !thing && (!this || (!this.nodeName && !this.node))
-        , ret = next.apply(this, thing instanceof Event ? [] : arguments)
-    if (shadows || (customs && everything)) raf(refresh)
-    return ret
-  }
-}
-
-const start = ripple => {
-  load(ripple)
-  ready(ripple.draw)
-  if (customs) ready(polytop(ripple))
-  else ready(d => all('*').filter(by('nodeName', includes('-'))).map(ripple.draw))
-  return ripple
-}
-
-const polytop = ripple => {
-  var muto = new MutationObserver(drawNodes(ripple))
-  return d => muto.observe(document.body, { childList: true, subtree: true })
-}
-
-const drawNodes = ripple => mutations => mutations
-  .map(key('addedNodes'))
-  .map(to.arr)
-  .reduce(flatten, [])
+const pull = el => (all('*', el && el.nodeName ? el : false)
   .filter(by('nodeName', includes('-')))
-  .map(ripple.draw)
+  .filter(not(key('requested')))
+  .map(key('requested', true))
+  .map(ripple.draw), el)
 
 const track = ripple => next => function(res, { name, headers }){ 
   const exists = name in this.deps
@@ -58,15 +33,15 @@ const track = ripple => next => function(res, { name, headers }){
        , false
 }
 
-const load = ripple => group('pulling cache', fn =>
-  (parse(localStorage.ripple) || [])
+const refresh = ripple => connected => group('refreshing', d =>
+  values(ripple.resources)
     .map(({ name }) => log(name))
     .map(name => ripple.io.emit('change', [name, { name, headers }])))
 
 const limit = next => function(res){
-  return res.name in this.deps 
-       ? (next ? next.apply(this, arguments) : res)
-       : false
+  return !(res.name in this.deps) ? false
+       : !next                    ? true
+       :  next.apply(this, arguments)
 }
 
 const deps = el => format([ 
@@ -86,8 +61,8 @@ const format = arr => el => arr
 const loaded = ripple => render => el => ripple.deps(el)
   .filter(not(is.in(ripple.resources)))
   .map(name => (debug('pulling', name), name))
-  .map(name => ripple.io.emit('change', [name, { headers }]))
-  .length ? false : render(el)
+  .map(name => ripple.io.emit('change', [name, { name, headers }]))
+  .length ? false : pull(render(el))
 
 import { default as from } from 'utilise/from'
 import includes from 'utilise/includes'

@@ -99,7 +99,7 @@ function backpressure(ripple) {
   log('creating');
   if (!ripple.io) return ripple;
 /* istanbul ignore next */
-  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.draw = draw(ripple)(ripple.draw), ripple.deps = deps, start(ripple);
+  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.deps = deps, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple;
 
   ripple.to = limit(ripple.to);
   ripple.from = track(ripple)(ripple.from);
@@ -110,44 +110,12 @@ function backpressure(ripple) {
 }
 
 /* istanbul ignore next */
-var draw = function draw(ripple) {
-  var refresh = function refresh(d) {
-    return (0, _all2.default)(':unresolved').filter((0, _not2.default)((0, _key2.default)('requested'))).map((0, _key2.default)('requested', true)).map(ripple.draw);
-  };
-
-  return function (next) {
-    return function (thing) {
-      var everything = !thing && (!this || !this.nodeName && !this.node),
-          ret = next.apply(this, thing instanceof Event ? [] : arguments);
-      if (shadows || customs && everything) raf(refresh);
-      return ret;
-    };
-  };
-};
-
-/* istanbul ignore next */
 var start = function start(ripple) {
-  load(ripple);
-  (0, _ready2.default)(ripple.draw);
-  if (customs) (0, _ready2.default)(polytop(ripple));else (0, _ready2.default)(function (d) {
-    return (0, _all2.default)('*').filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).map(ripple.draw);
-  });
-  return ripple;
+  return pull;
 };
 
-/* istanbul ignore next */
-var polytop = function polytop(ripple) {
-  var muto = new MutationObserver(drawNodes(ripple));
-  return function (d) {
-    return muto.observe(document.body, { childList: true, subtree: true });
-  };
-};
-
-/* istanbul ignore next */
-var drawNodes = function drawNodes(ripple) {
-  return function (mutations) {
-    return mutations.map((0, _key2.default)('addedNodes')).map(_to2.default.arr).reduce(_flatten2.default, []).filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).map(ripple.draw);
-  };
+var pull = function pull(el) {
+  return (0, _all2.default)('*', el && el.nodeName ? el : false).filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).filter((0, _not2.default)((0, _key2.default)('requested'))).map((0, _key2.default)('requested', true)).map(ripple.draw), el;
 };
 
 var track = function track(ripple) {
@@ -164,21 +132,22 @@ var track = function track(ripple) {
   };
 };
 
-/* istanbul ignore next */
-var load = function load(ripple) {
-  return (0, _group2.default)('pulling cache', function (fn) {
-    return ((0, _parse2.default)(localStorage.ripple) || []).map(function (_ref2) {
-      var name = _ref2.name;
-      return log(name);
-    }).map(function (name) {
-      return ripple.io.emit('change', [name, { name: name, headers: headers }]);
+var refresh = function refresh(ripple) {
+  return function (connected) {
+    return (0, _group2.default)('refreshing', function (d) {
+      return (0, _values2.default)(ripple.resources).map(function (_ref2) {
+        var name = _ref2.name;
+        return log(name);
+      }).map(function (name) {
+        return ripple.io.emit('change', [name, { name: name, headers: headers }]);
+      });
     });
-  });
+  };
 };
 
 var limit = function limit(next) {
   return function (res) {
-    return res.name in this.deps ? next ? next.apply(this, arguments) : res : false;
+    return !(res.name in this.deps) ? false : !next ? true : next.apply(this, arguments);
   };
 };
 
@@ -203,8 +172,8 @@ var loaded = function loaded(ripple) {
       return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
         return debug('pulling', name), name;
       }).map(function (name) {
-        return ripple.io.emit('change', [name, { headers: headers }]);
-      }).length ? false : render(el);
+        return ripple.io.emit('change', [name, { name: name, headers: headers }]);
+      }).length ? false : pull(render(el));
     };
   };
 };
