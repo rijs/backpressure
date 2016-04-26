@@ -8,7 +8,7 @@
     "url": "git://github.com/rijs/backpressure.git"
   },
   "scripts": {
-    "ignore": "find ./dist -type f -exec sed -i -E \"s/(function _interopRequire|^.*?ripple.render|^.*?var (log|load|start|deps|draw|polytop|drawNodes|format))/\\/* istanbul ignore next *\\/\\n\\1/g\" {} ';'",
+    "ignore": "find ./dist -type f -exec sed -i -E \"s/(function _interopRequire)/\\/* istanbul ignore next *\\/\\n\\1/g\" {} ';'",
     "babel": "babel src -d dist",
     "clean": "rm -rf dist && mkdir dist",
     "build": "npm run clean && npm run babel && npm run ignore",

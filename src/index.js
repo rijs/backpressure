@@ -5,7 +5,8 @@ export default function backpressure(ripple){
   log('creating')
   if (!ripple.io) return ripple
   if (client) return (ripple.render = loaded(ripple)(ripple.render))
-                   , (ripple.deps = deps)
+                   , (ripple.pull   = pull(ripple))
+                   , (ripple.deps   = deps)
                    , ready(start(ripple))
                    , ripple.io.on('connect', refresh(ripple))
                    , ripple.io.on('reconnect', reconnect(ripple))
@@ -17,9 +18,9 @@ export default function backpressure(ripple){
   return ripple
 }
 
-const start = ripple => pull
+const start = ripple => d => ripple.pull(document.body)
 
-const pull = el => (all('*', el && el.nodeName ? el : false)
+const pull = ripple => el => !el ? undefined : (all('*', el)
   .filter(by('nodeName', includes('-')))
   .filter(not(key('requested')))
   .map(key('requested', true))
@@ -64,7 +65,7 @@ const loaded = ripple => render => el => ripple.deps(el)
   .filter(not(is.in(ripple.resources)))
   .map(name => (debug('pulling', name), name))
   .map(name => ripple.io.emit('change', [name, false, { name, headers }]))
-  .length ? false : pull(render(el))
+  .length ? false : ripple.pull(render(el))
 
 import { default as from } from 'utilise/from'
 import includes from 'utilise/includes'
