@@ -185,6 +185,7 @@ describe('Sync', function(){
  
     it('should initialise correctly', function(){  
       var ripple = back(sync(draw(data(core()))))
+      expect(ripple.requested).to.be.eql({})
       expect(ripple.pull).to.be.a('function')
       expect(ripple.deps).to.be.a('function')
     })
@@ -210,7 +211,7 @@ describe('Sync', function(){
         ])
 
         emitted = []
-        bar.requested = false
+        delete ripple.requested['x-bar']
         ripple.pull(foo)
       })
 
@@ -233,7 +234,7 @@ describe('Sync', function(){
       ripple('x-foo', noop)
       
       time(30, function(){
-        bar.requested = false
+        delete ripple.requested['x-bar']
         emitted = []
         ripple.draw(foo)
       })
@@ -252,7 +253,12 @@ describe('Sync', function(){
     it('should refresh cache on connect', function(){  
       var ripple = back(sync(load(draw(fn(data(core()))))))
       
+      expect(ripple.requested).to.eql({})
       connect()
+      expect(ripple.requested).to.eql({ 
+        'foo': 1
+      , 'bar': 1
+      })
       expect(emitted).to.eql([
         ['change', [ 'foo' , false , { name: 'foo', headers: { pull: true } } ]]
       , ['change', [ 'bar' , false , { name: 'bar', headers: { pull: true } } ]]
@@ -271,6 +277,21 @@ describe('Sync', function(){
       reconnect()
       expect(connected).to.be.ok
       expect(disconnected).to.be.ok
+    })
+
+    it('should not make multiple requests for same resource', function(done){  
+      document.body.innerHTML = '<x-foo></x-foo><x-foo></x-foo><x-foo></x-foo>'
+      var ripple = back(sync(draw(fn(data(core())))))
+      
+      document.body.children[0].draw()
+      document.body.children[1].draw()
+      document.body.children[2].draw()
+
+      time(50, function(){
+        expect(emitted).to.have.lengthOf(1)
+        expect(ripple.requested).to.eql({ 'x-foo': 1 })
+        done()
+      })
     })
 
   })

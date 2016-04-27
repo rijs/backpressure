@@ -4,9 +4,10 @@
 export default function backpressure(ripple){
   log('creating')
   if (!ripple.io) return ripple
-  if (client) return (ripple.render = loaded(ripple)(ripple.render))
-                   , (ripple.pull   = pull(ripple))
-                   , (ripple.deps   = deps)
+  if (client) return (ripple.render    = loaded(ripple)(ripple.render))
+                   , (ripple.pull      = pull(ripple))
+                   , (ripple.deps      = deps)
+                   , (ripple.requested = {})
                    , ready(start(ripple))
                    , ripple.io.on('connect', refresh(ripple))
                    , ripple.io.on('reconnect', reconnect(ripple))
@@ -22,8 +23,7 @@ const start = ripple => d => ripple.pull(document.body)
 
 const pull = ripple => el => !el ? undefined : (all('*', el)
   .filter(by('nodeName', includes('-')))
-  .filter(not(key('requested')))
-  .map(key('requested', true))
+  .filter(by('nodeName', d => !is.in(ripple.requested)(lo(d))))
   .map(ripple.draw), el)
 
 const track = ripple => next => function({ name, headers }){ 
@@ -38,8 +38,14 @@ const reconnect = ({ io }) => d => (io.io.disconnect(), io.io.connect())
 
 const refresh = ripple => d => group('refreshing', d =>
   values(ripple.resources)
-    .map(({ name }) => log(name))
-    .map(name => ripple.io.emit('change', [name, false, { name, headers }])))
+    .map(({ name }) => emit(ripple)(name)))
+
+const emit = ripple => name => { 
+  log('pulling', name)
+  ripple.io.emit('change', [ name, false, { name, headers } ])
+  ripple.requested[name] = 1
+  return name 
+}
 
 const limit = next => function(res){
   return !(res.name in this.deps) ? false
@@ -63,8 +69,8 @@ const format = arr => el => arr
 
 const loaded = ripple => render => el => ripple.deps(el)
   .filter(not(is.in(ripple.resources)))
-  .map(name => (debug('pulling', name), name))
-  .map(name => ripple.io.emit('change', [name, false, { name, headers }]))
+  .filter(not(is.in(ripple.requested)))
+  .map(emit(ripple))
   .length ? false : ripple.pull(render(el))
 
 import { default as from } from 'utilise/from'
@@ -84,7 +90,6 @@ import key from 'utilise/key'
 import is from 'utilise/is'
 import by from 'utilise/by'
 import lo from 'utilise/lo'
-const log = require('utilise/log')('[ri/backpressure]')
-    , err = require('utilise/err')('[ri/backpressure]')
+const log = require('utilise/log')('[ri/back]')
+    , err = require('utilise/err')('[ri/back]')
     , headers = { pull: true }
-    , debug = noop

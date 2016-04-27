@@ -82,7 +82,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function backpressure(ripple) {
   log('creating');
   if (!ripple.io) return ripple;
-  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.pull = pull(ripple), ripple.deps = deps, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple.io.on('reconnect', reconnect(ripple)), ripple;
+  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.pull = pull(ripple), ripple.deps = deps, ripple.requested = {}, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple.io.on('reconnect', reconnect(ripple)), ripple;
 
   ripple.to = limit(ripple.to);
   ripple.from = track(ripple)(ripple.from);
@@ -100,7 +100,9 @@ var start = function start(ripple) {
 
 var pull = function pull(ripple) {
   return function (el) {
-    return !el ? undefined : ((0, _all2.default)('*', el).filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).filter((0, _not2.default)((0, _key2.default)('requested'))).map((0, _key2.default)('requested', true)).map(ripple.draw), el);
+    return !el ? undefined : ((0, _all2.default)('*', el).filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).filter((0, _by2.default)('nodeName', function (d) {
+      return !_is2.default.in(ripple.requested)((0, _lo2.default)(d));
+    })).map(ripple.draw), el);
   };
 };
 
@@ -131,11 +133,18 @@ var refresh = function refresh(ripple) {
     return (0, _group2.default)('refreshing', function (d) {
       return (0, _values2.default)(ripple.resources).map(function (_ref3) {
         var name = _ref3.name;
-        return log(name);
-      }).map(function (name) {
-        return ripple.io.emit('change', [name, false, { name: name, headers: headers }]);
+        return emit(ripple)(name);
       });
     });
+  };
+};
+
+var emit = function emit(ripple) {
+  return function (name) {
+    log('pulling', name);
+    ripple.io.emit('change', [name, false, { name: name, headers: headers }]);
+    ripple.requested[name] = 1;
+    return name;
   };
 };
 
@@ -160,11 +169,7 @@ var format = function format(arr) {
 var loaded = function loaded(ripple) {
   return function (render) {
     return function (el) {
-      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.resources))).map(function (name) {
-        return debug('pulling', name), name;
-      }).map(function (name) {
-        return ripple.io.emit('change', [name, false, { name: name, headers: headers }]);
-      }).length ? false : ripple.pull(render(el));
+      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.resources))).filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(emit(ripple)).length ? false : ripple.pull(render(el));
     };
   };
 };
@@ -172,4 +177,4 @@ var loaded = function loaded(ripple) {
 var log = require('utilise/log')('[ri/backpressure]'),
     err = require('utilise/err')('[ri/backpressure]'),
     headers = { pull: true },
-    debug = _noop2.default;
+    debug = log;
