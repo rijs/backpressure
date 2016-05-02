@@ -167,6 +167,7 @@ describe('Sync', function(){
       mockery.registerMock('socket.io-client', sioClient)
       keys(require.cache).map(d => delete require.cache[d])
       require('browserenv')
+      keys(require.cache).map(d => delete require.cache[d])
       require('utilise')
       global.Element = window.Element
       global.Node = window.Node
