@@ -174,7 +174,6 @@ var loaded = function loaded(ripple) {
   };
 };
 
-var log = require('utilise/log')('[ri/backpressure]'),
-    err = require('utilise/err')('[ri/backpressure]'),
-    headers = { pull: true },
-    debug = log;
+var log = require('utilise/log')('[ri/back]'),
+    err = require('utilise/err')('[ri/back]'),
+    headers = { pull: true };
