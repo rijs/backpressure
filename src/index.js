@@ -68,7 +68,7 @@ const format = arr => el => arr
   .filter(unique)
 
 const loaded = ripple => render => el => ripple.deps(el)
-  .filter(not(is.in(ripple.resources)))
+  // .filter(not(is.in(ripple.resources)))
   .filter(not(is.in(ripple.requested)))
   .map(emit(ripple))
   .length ? false : ripple.pull(render(el))

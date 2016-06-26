@@ -169,7 +169,9 @@ var format = function format(arr) {
 var loaded = function loaded(ripple) {
   return function (render) {
     return function (el) {
-      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.resources))).filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(emit(ripple)).length ? false : ripple.pull(render(el));
+      return ripple.deps(el)
+      // .filter(not(is.in(ripple.resources)))
+      .filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(emit(ripple)).length ? false : ripple.pull(render(el));
     };
   };
 };
