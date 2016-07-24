@@ -77,12 +77,12 @@ var _lo2 = _interopRequireDefault(_lo);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // -------------------------------------------
-// API: Applies backpressure on the flow of streams
+// Applies backpressure on the flow of streams
 // -------------------------------------------
 function backpressure(ripple) {
   log('creating');
   if (!ripple.io) return ripple;
-  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.pull = pull(ripple), ripple.deps = deps, ripple.requested = {}, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple.io.on('reconnect', reconnect(ripple)), ripple;
+  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.pull = emit(ripple), ripple.deps = deps, ripple.requested = {}, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple.io.on('reconnect', reconnect(ripple)), ripple;
 
   ripple.to = limit(ripple.to);
   ripple.from = track(ripple)(ripple.from);
@@ -94,11 +94,11 @@ function backpressure(ripple) {
 
 var start = function start(ripple) {
   return function (d) {
-    return ripple.pull(document.body);
+    return scan(ripple)(document.body);
   };
 };
 
-var pull = function pull(ripple) {
+var scan = function scan(ripple) {
   return function (el) {
     return !el ? undefined : ((0, _all2.default)('*', el).filter((0, _by2.default)('nodeName', (0, _includes2.default)('-'))).filter((0, _by2.default)('nodeName', function (d) {
       return !_is2.default.in(ripple.requested)((0, _lo2.default)(d));
@@ -108,21 +108,24 @@ var pull = function pull(ripple) {
 
 var track = function track(ripple) {
   return function (next) {
-    return function (_ref) {
-      var name = _ref.name;
-      var headers = _ref.headers;
+    return function (req, res) {
+      var name = req.name;
+      var type = req.type;
+      var socket = req.socket;
+      var send = ripple.send;
+      var exists = name in socket.deps;
 
-      var exists = name in this.deps;
-      if (!headers || !headers.pull) return next ? next.apply(this, arguments) : true;
-      this.deps[name] = 1;
-      ripple.stream(this)(name);
+      if (!(name in ripple.resources)) return;
+      if (type !== 'pull') return (next || identity)(req, res);
+      socket.deps[name] = 1;
+      send(socket)(name);
       return false;
     };
   };
 };
 
-var reconnect = function reconnect(_ref2) {
-  var io = _ref2.io;
+var reconnect = function reconnect(_ref) {
+  var io = _ref.io;
   return function (d) {
     return io.io.disconnect(), io.io.connect();
   };
@@ -131,8 +134,8 @@ var reconnect = function reconnect(_ref2) {
 var refresh = function refresh(ripple) {
   return function (d) {
     return (0, _group2.default)('refreshing', function (d) {
-      return (0, _values2.default)(ripple.resources).map(function (_ref3) {
-        var name = _ref3.name;
+      return (0, _values2.default)(ripple.resources).map(function (_ref2) {
+        var name = _ref2.name;
         return emit(ripple)(name);
       });
     });
@@ -142,15 +145,15 @@ var refresh = function refresh(ripple) {
 var emit = function emit(ripple) {
   return function (name) {
     log('pulling', name);
-    ripple.io.emit('change', [name, false, { name: name, headers: headers }]);
+    ripple.io.emit('change', { name: name, type: 'pull' });
     ripple.requested[name] = 1;
     return name;
   };
 };
 
 var limit = function limit(next) {
-  return function (res) {
-    return !(res.name in this.deps) ? false : !next ? true : next.apply(this, arguments);
+  return function (req) {
+    return req.name in req.socket.deps ? (next || identity)(req) : false;
   };
 };
 
@@ -167,15 +170,12 @@ var format = function format(arr) {
 };
 
 var loaded = function loaded(ripple) {
-  return function (render) {
+  return function (next) {
     return function (el) {
-      return ripple.deps(el)
-      // .filter(not(is.in(ripple.resources)))
-      .filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(emit(ripple)).length ? false : ripple.pull(render(el));
+      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(emit(ripple)).length ? false : scan(ripple)(next(el));
     };
   };
 };
 
 var log = require('utilise/log')('[ri/back]'),
-    err = require('utilise/err')('[ri/back]'),
-    headers = { pull: true };
+    err = require('utilise/err')('[ri/back]');

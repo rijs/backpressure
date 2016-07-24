@@ -5,12 +5,12 @@ var core     = require('rijs.core').default
   , utilise  = require('utilise')
   , expect   = require('chai').expect
   , mockery  = require('mockery')
+  , headers  = { 'content-type': 'application/data' }
   , request  = { headers: { 'x-forwarded-for': 10 }}
   , socket   = { emit: function(type, data){ return socket.emitted = emitted = [type, data]}, request: request}
   , other    = { emit: function(type, data){ return other.emitted = [type, data]}, request: request }
   , sockets, opts, emitted, connection, receive, connect, reconnect, connected, disconnected
-
-describe('Sync', function(){
+describe('Backpressure', function(){
 
   describe('Server', function(){
       
@@ -44,12 +44,13 @@ describe('Sync', function(){
       var ripple 
 
       ripple = back(next(sync(data(core()), { server: { foo: 'bar' }})))
-      expect(ripple.to.call({ deps: { foo: 1 }}, { name: 'foo' })).to.be.eql(5)
-      expect(ripple.to.call({ deps: { foo: 1 }}, { name: 'bar' })).to.be.eql(false)
+      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'bar' })).to.be.eql(false)
+      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'foo' })).to.be.eql(5)
 
       ripple = back(nonext(sync(data(core()), { server: { foo: 'bar' }})))
-      expect(ripple.to.call({ deps: { foo: 1 }}, { name: 'foo' })).to.be.eql(true)
-      expect(ripple.to.call({ deps: { foo: 1 }}, { name: 'bar' })).to.be.eql(false)
+      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'bar' })).to.be.eql(false)
+      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'foo' }))
+        .to.be.eql({ socket: { deps: { foo: 1 }}, name: 'foo' })
 
       function next(ripple) {
         ripple.to = function(){ return 5 }
@@ -62,44 +63,46 @@ describe('Sync', function(){
       }
     })
 
-
-    it('should stream new resource', function(){  
+    it('should not send new resource unless required', function(){  
       var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
       expect(socket.deps).to.be.eql({})
       expect(other.deps).to.be.eql({})
-      ripple('foo', { foo: 'bar' }) 
+      ripple('foo', { foo: 'bar' })
       expect(other.emitted).to.be.not.ok
       expect(socket.emitted).to.be.not.ok
     })
 
-   it('should ripple(!) changes - efficiently', function(){  
+    it('should not accept on non-existent resources (server)', function(){  
       var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
 
-      receive.call(socket, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
+      receive.call(socket, { name: 'foo', type: 'pull' }) 
+      expect(socket.deps).to.be.eql({})
+      expect(other.deps).to.be.eql({})
+      expect(ripple.resources.foo).to.be.not.ok
+    })
+
+    it('should ripple(!) changes - efficiently', function(){  
+      var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
+
+      ripple('foo', { foo: 'bar' }) 
+      receive.call(socket, { name: 'foo', type: 'pull' }) 
+      expect(socket.emitted[1]).to.be.eql({ name: 'foo', time: 0, type: 'update', value: { foo: 'bar' }, headers})
+      expect(other.emitted).to.be.not.ok
       expect(socket.deps).to.be.eql({ foo: 1 })
       expect(other.deps).to.be.eql({})
       
       // should not oversend
-      ripple('foo', { foo: 'bar' }) 
-      expect(socket.emitted).to.be.eql(['change', ['foo', { time: 0, type: 'update', value: { foo: 'bar' }}]])
-      expect(other.emitted).to.be.not.ok
       socket.emitted = other.emitted = null
+      ripple('foo', { foo: 'baz' }) 
+      expect(socket.emitted[1]).to.be.eql({ name: 'foo', time: 1, type: 'update', value: { foo: 'baz' }, headers})
+      expect(other.emitted).to.be.not.ok
 
       // subsequent changes should ripple
-      receive.call({ deps: {}}, ['foo', { type: 'update', value: { foo: 'baz' }}]) 
-      expect(ripple.resources.foo.body).to.be.eql({ foo: 'baz' })
-      expect(socket.emitted).to.be.eql(['change', ['foo', { time: 1, type: 'update', value: { foo: 'baz' }}]])
+      socket.emitted = other.emitted = null
+      receive.call({ deps: {} }, { name: 'foo', type: 'update', value: { foo: 'boo' }})
+      expect(ripple.resources.foo.body).to.be.eql({ foo: 'boo' })
+      expect(socket.emitted[1]).to.be.eql({ name: 'foo', time: 2, type: 'update', value: { foo: 'boo' }, headers})
       expect(other.emitted).to.be.not.ok
-    })
-
-    it('should always send if pull request', function(){  
-      var ripple = back(sync(data(core()), { server: { foo: 'bar' }}))
-      other.deps = { foo: 1 }
-
-      ripple('foo', { foo: 'bar' }) 
-      receive.call(other, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
-      expect(other.emitted).to.be.eql(['change', ['foo', false, { name: 'foo', body: { foo: 'bar' }, headers: { 'content-type': 'application/data' }}]])
-      expect(socket.emitted).to.be.not.ok
     })
 
     it('should respect existing transforms (outgoing - block)', function(){  
@@ -107,29 +110,21 @@ describe('Sync', function(){
       ripple.to = falsy
       ripple = back(ripple)
 
-      receive.call(socket, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
-      expect(socket.deps).to.be.eql({ foo: 1 })
-      expect(other.deps).to.be.eql({})
-      
-      ripple('foo', { foo: 'bar' }) 
+      socket.deps = { foo: 1 }
+      ripple('foo', { foo: 'bar' })
       expect(socket.emitted).to.be.not.ok
       expect(other.emitted).to.be.not.ok
-      socket.emitted = other.emitted = null
     })
     
-    it('should respect existing transforms (outgoing - pass through)', function(){  
+    it('should respect existing transforms (outgoing)', function(){  
       var ripple = sync(data(core()), { server: { foo: 'bar' }})
-      ripple.to = not(falsy)
+      ripple.to = hash
       ripple = back(ripple)
 
-      receive.call(socket, ['foo', false, { name: 'foo', headers: { pull: true }}]) 
-      expect(socket.deps).to.be.eql({ foo: 1 })
-      expect(other.deps).to.be.eql({})
-      
+      socket.deps = { foo: 1 }
       ripple('foo', { foo: 'bar' }) 
-      expect(socket.emitted).to.be.eql(['change', ['foo', { time: 0, type: 'update', value: { foo: 'bar' }}]])
+      expect(socket.emitted[1]).to.be.eql({ name: 'foo', time: 0, type: 'update', value: { hash: 785935555 }, headers })
       expect(other.emitted).to.be.not.ok
-      socket.emitted = other.emitted = null
     })
 
     it('should respect existing transforms (incoming - block)', function(){  
@@ -137,19 +132,21 @@ describe('Sync', function(){
       ripple.from = falsy
       ripple = back(ripple)
 
-      receive.call({ deps: {}}, ['foo', { type: 'update', value: { foo: 'baz' }}]) 
-      expect(ripple.resources.foo).to.be.not.ok
+      ripple('foo', { foo: 'bar' })
+      receive.call({ deps: {}}, { name: 'foo', type: 'update', value: { foo: 'baz' }})
+      expect(ripple.resources.foo.body).to.be.eql({ foo: 'bar' })
       expect(socket.emitted).to.be.not.ok
       expect(other.emitted).to.be.not.ok
     })
     
     it('should respect existing transforms (incoming - pass through)', function(){  
       var ripple = sync(data(core()), { server: { foo: 'bar' }})
-      ripple.from = not(falsy)
+      ripple.from = hash
       ripple = back(ripple)
 
-      receive.call({ deps: {}}, ['foo', { type: 'update', value: { foo: 'baz' }}]) 
-      expect(ripple.resources.foo.body).to.be.eql({ foo: 'baz' })
+      ripple('foo', { foo: 'bar' })
+      receive.call({ deps: {}}, { name: 'foo', type: 'update', value: { foo: 'baz' }})
+      expect(ripple.resources.foo.body).to.be.eql({ hash: 785943243 })
       expect(socket.emitted).to.be.not.ok
       expect(other.emitted).to.be.not.ok
     })
@@ -171,7 +168,7 @@ describe('Sync', function(){
       require('utilise')
       global.Element = window.Element
       global.Node = window.Node
-      global.requestAnimationFrame = function(fn){ time(16, fn) }
+      global.requestAnimationFrame = function(fn){ time(1, fn) }
       back = require('./').default
       sync = require('rijs.sync').default
       draw = require('rijs.components').default
@@ -198,7 +195,7 @@ describe('Sync', function(){
       expect(ripple.deps(el1)).to.eql(['x-foo', 'a', 'b', 'x-foo.css'])
     })
 
-    it('should pull resource', function(done){  
+    it('should pull resource not previously requested', function(done){
       document.body.innerHTML = '<x-foo><x-bar></x-bar></x-foo>'
       var ripple = back(sync(draw(data(core()))))
         , foo = document.body.firstChild
@@ -207,19 +204,19 @@ describe('Sync', function(){
       // pull everything
       time(20, function(){
         expect(emitted).to.eql([
-          ['change', [ 'x-foo' , false , { name: 'x-foo', headers: { pull: true } } ]]
-        , ['change', [ 'x-bar' , false , { name: 'x-bar', headers: { pull: true } } ]]
+          ['change', { name: 'x-foo', type: 'pull' }]
+        , ['change', { name: 'x-bar', type: 'pull' }]
         ])
 
         emitted = []
         delete ripple.requested['x-bar']
-        ripple.pull(foo)
+        foo.draw()
       })
 
       // pull children
       time(60, function(){
         expect(emitted).to.eql([
-          ['change', [ 'x-bar' , false , { name: 'x-bar', headers: { pull: true } } ]]
+          ['change', { name: 'x-bar', type: 'pull' }]
         ])
 
         done()
@@ -261,8 +258,8 @@ describe('Sync', function(){
       , 'bar': 1
       })
       expect(emitted).to.eql([
-        ['change', [ 'foo' , false , { name: 'foo', headers: { pull: true } } ]]
-      , ['change', [ 'bar' , false , { name: 'bar', headers: { pull: true } } ]]
+        ['change', { name: 'foo', type: 'pull' }]
+      , ['change', { name: 'bar', type: 'pull' }]
       ])
 
       function load(ripple) {
@@ -324,3 +321,8 @@ function sioClient(){
   , io: { connect: function(){ connected = true }, disconnect: function(){ disconnected = true } }
   }
 } 
+
+function hash(req) {
+  req.value = { hash: hashcode(str(req.value)) }
+  return req
+}

@@ -5,7 +5,7 @@ export default function backpressure(ripple){
   log('creating')
   if (!ripple.io) return ripple
   if (client) return (ripple.render    = loaded(ripple)(ripple.render))
-                   , (ripple.pull      = pull(ripple))
+                   , (ripple.pull      = emit(ripple))
                    , (ripple.deps      = deps)
                    , (ripple.requested = {})
                    , ready(start(ripple))
@@ -19,18 +19,22 @@ export default function backpressure(ripple){
   return ripple
 }
 
-const start = ripple => d => ripple.pull(document.body)
+const start = ripple => d => scan(ripple)(document.body)
 
-const pull = ripple => el => !el ? undefined : (all('*', el)
+const scan = ripple => el => !el ? undefined : (all('*', el)
   .filter(by('nodeName', includes('-')))
   .filter(by('nodeName', d => !is.in(ripple.requested)(lo(d))))
   .map(ripple.draw), el)
 
-const track = ripple => next => function({ name, headers }){ 
-  const exists = name in this.deps
-  if (!headers || !headers.pull) return next ? next.apply(this, arguments) : true
-  this.deps[name] = 1
-  ripple.stream(this)(name)
+const track = ripple => next => (req, res) => { 
+  const { name, type, socket } = req
+      , { send } = ripple
+      , exists = name in socket.deps
+
+  if (!(name in ripple.resources)) return
+  if (type !== 'pull') return (next || identity)(req, res)
+  socket.deps[name] = 1
+  send(socket)(name)
   return false
 }
 
@@ -42,16 +46,15 @@ const refresh = ripple => d => group('refreshing', d =>
 
 const emit = ripple => name => { 
   log('pulling', name)
-  ripple.io.emit('change', [ name, false, { name, headers } ])
+  ripple.io.emit('change', { name, type: 'pull' }) 
   ripple.requested[name] = 1
   return name 
 }
 
-const limit = next => function(res){
-  return !(res.name in this.deps) ? false
-       : !next                    ? true
-       :  next.apply(this, arguments)
-}
+const limit = next => req => 
+    req.name in req.socket.deps
+  ? (next || identity)(req)
+  : false
 
 const deps = el => format([ 
     key('nodeName')
@@ -67,11 +70,10 @@ const format = arr => el => arr
   .reduce(flatten, [])
   .filter(unique)
 
-const loaded = ripple => render => el => ripple.deps(el)
-  // .filter(not(is.in(ripple.resources)))
+const loaded = ripple => next => el => ripple.deps(el)
   .filter(not(is.in(ripple.requested)))
   .map(emit(ripple))
-  .length ? false : ripple.pull(render(el))
+  .length ? false : scan(ripple)(next(el))
 
 import { default as from } from 'utilise/from'
 import includes from 'utilise/includes'
@@ -92,4 +94,3 @@ import by from 'utilise/by'
 import lo from 'utilise/lo'
 const log = require('utilise/log')('[ri/back]')
     , err = require('utilise/err')('[ri/back]')
-    , headers = { pull: true }
