@@ -1,5 +1,5 @@
 // -------------------------------------------
-// API: Applies backpressure on the flow of streams
+// Applies backpressure on the flow of streams
 // -------------------------------------------
 export default function backpressure(ripple){
   log('creating')
