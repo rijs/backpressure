@@ -60,6 +60,7 @@ const deps = el => format([
     key('nodeName')
   , attr('data')
   , attr('css')
+  , attr('is')
   ])(el)
 
 const format = arr => el => arr

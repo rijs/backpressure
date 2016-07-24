@@ -158,7 +158,7 @@ var limit = function limit(next) {
 };
 
 var deps = function deps(el) {
-  return format([(0, _key2.default)('nodeName'), (0, _attr2.default)('data'), (0, _attr2.default)('css')])(el);
+  return format([(0, _key2.default)('nodeName'), (0, _attr2.default)('data'), (0, _attr2.default)('css'), (0, _attr2.default)('is')])(el);
 };
 
 var format = function format(arr) {

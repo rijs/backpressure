@@ -190,9 +190,9 @@ describe('Backpressure', function(){
 
     it('should extract deps', function(){  
       var ripple = back(sync(draw(data(core()))))
-        , el1 = el('x-foo[data=A A b][css=x-foo.css]')
+        , el1 = el('x-foo[data=A A b][css=x-foo.css][is=baz]')
       
-      expect(ripple.deps(el1)).to.eql(['x-foo', 'a', 'b', 'x-foo.css'])
+      expect(ripple.deps(el1)).to.eql(['x-foo', 'a', 'b', 'x-foo.css', 'baz'])
     })
 
     it('should pull resource not previously requested', function(done){
