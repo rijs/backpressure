@@ -13,6 +13,10 @@ var _includes = require('utilise/includes');
 
 var _includes2 = _interopRequireDefault(_includes);
 
+var _identity = require('utilise/identity');
+
+var _identity2 = _interopRequireDefault(_identity);
+
 var _flatten = require('utilise/flatten');
 
 var _flatten2 = _interopRequireDefault(_flatten);
@@ -73,7 +77,6 @@ var _lo = require('utilise/lo');
 
 var _lo2 = _interopRequireDefault(_lo);
 
-/* istanbul ignore next */
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // -------------------------------------------
@@ -116,7 +119,7 @@ var track = function track(ripple) {
       var exists = name in socket.deps;
 
       if (!(name in ripple.resources)) return;
-      if (type !== 'pull') return (next || identity)(req, res);
+      if (type !== 'pull') return (next || _identity2.default)(req, res);
       socket.deps[name] = 1;
       send(socket)(name);
       return false;
@@ -153,7 +156,7 @@ var emit = function emit(ripple) {
 
 var limit = function limit(next) {
   return function (req) {
-    return req.name in req.socket.deps ? (next || identity)(req) : false;
+    return req.name in req.socket.deps ? (next || _identity2.default)(req) : false;
   };
 };
 
