@@ -78,6 +78,7 @@ const loaded = ripple => next => el => ripple.deps(el)
 
 import { default as from } from 'utilise/from'
 import includes from 'utilise/includes'
+import identity from 'utilise/identity'
 import flatten from 'utilise/flatten'
 import unique from 'utilise/unique'
 import values from 'utilise/values'
