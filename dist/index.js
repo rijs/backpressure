@@ -77,6 +77,7 @@ var _lo = require('utilise/lo');
 
 var _lo2 = _interopRequireDefault(_lo);
 
+/* istanbul ignore next */
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // -------------------------------------------
