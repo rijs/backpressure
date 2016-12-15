@@ -45,14 +45,26 @@ const reconnect = ({ io }) => d => (io.io.disconnect(), io.io.connect())
 
 const refresh = ripple => d => group('refreshing', d =>
   values(ripple.resources)
-    .map(({ name }) => emit(ripple)(name)))
+    .map(d => d.name)
+    .map(ripple.pull))
 
-const emit = ripple => name => { 
-  log('pulling', name)
-  ripple.io.emit('change', { name, type: 'pull' }) 
-  ripple.requested[name] = 1
-  return name 
+const pull = ripple => (name, node) => {
+  if (node instanceof Element) {
+    const original = attr('data')(node) || ''     
+    if (!original.split(' ').some(is(name)))
+      attr('data', `${original} ${name}`.trim())(node)
+  }
+
+  if (!(name in ripple.requested)) {
+    log('pulling', name)
+    ripple.requested[name] = ripple.send({ name, type: 'pull' })
+  } 
+
+  return name in ripple.resources 
+       ? promise(ripple(name))
+       : ripple.requested[name]
 }
+
 
 const limit = next => req => 
     req.name in req.socket.deps
@@ -76,7 +88,7 @@ const format = arr => el => arr
 
 const render = ripple => next => el => ripple.deps(el)
   .filter(not(is.in(ripple.requested)))
-  .map(emit(ripple))
+  .map(ripple.pull)
   .length ? false : scan(ripple)(next(el))
 
 import { default as from } from 'utilise/from'
