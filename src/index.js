@@ -34,10 +34,11 @@ const track = ripple => next => (req, res) => {
       , exists = name in socket.deps
 
   if (!(name in ripple.resources)) return
-  if (type !== 'pull') return (next || identity)(req, res)
-  socket.deps[name] = 1
-  send(socket)(name)
-  return false
+  if (type === 'pull') {
+    socket.deps[name] = 1
+    send(socket)(name)
+  }
+  return (next || identity)(req, res)
 }
 
 const reconnect = ({ io }) => d => (io.io.disconnect(), io.io.connect())
