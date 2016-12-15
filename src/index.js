@@ -4,14 +4,16 @@
 export default function backpressure(ripple){
   log('creating')
   if (!ripple.io) return ripple
-  if (client) return (ripple.render    = loaded(ripple)(ripple.render))
-                   , (ripple.pull      = emit(ripple))
-                   , (ripple.deps      = deps)
-                   , (ripple.requested = {})
-                   , ready(start(ripple))
-                   , ripple.io.on('connect', refresh(ripple))
-                   , ripple.io.on('reconnect', reconnect(ripple))
-                   , ripple
+  if (client) {
+    ripple.render    = render(ripple)(ripple.render)
+    ripple.pull      = pull(ripple)
+    ripple.deps      = deps
+    ripple.requested = {}
+    ripple.io.on('connect', refresh(ripple))
+    ripple.io.on('reconnect', reconnect(ripple))
+    ready(start(ripple))
+    return ripple
+  }
 
   ripple.to = limit(ripple.to)
   ripple.from = track(ripple)(ripple.from)
@@ -71,7 +73,7 @@ const format = arr => el => arr
   .reduce(flatten, [])
   .filter(unique)
 
-const loaded = ripple => next => el => ripple.deps(el)
+const render = ripple => next => el => ripple.deps(el)
   .filter(not(is.in(ripple.requested)))
   .map(emit(ripple))
   .length ? false : scan(ripple)(next(el))
