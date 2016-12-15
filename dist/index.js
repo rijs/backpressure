@@ -86,7 +86,16 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function backpressure(ripple) {
   log('creating');
   if (!ripple.io) return ripple;
-  if (_client2.default) return ripple.render = loaded(ripple)(ripple.render), ripple.pull = emit(ripple), ripple.deps = deps, ripple.requested = {}, (0, _ready2.default)(start(ripple)), ripple.io.on('connect', refresh(ripple)), ripple.io.on('reconnect', reconnect(ripple)), ripple;
+  if (_client2.default) {
+    ripple.render = render(ripple)(ripple.render);
+    ripple.pull = pull(ripple);
+    ripple.deps = deps;
+    ripple.requested = {};
+    ripple.io.on('connect', refresh(ripple));
+    ripple.io.on('reconnect', reconnect(ripple));
+    (0, _ready2.default)(start(ripple));
+    return ripple;
+  }
 
   ripple.to = limit(ripple.to);
   ripple.from = track(ripple)(ripple.from);
@@ -113,17 +122,19 @@ var scan = function scan(ripple) {
 var track = function track(ripple) {
   return function (next) {
     return function (req, res) {
-      var name = req.name;
-      var type = req.type;
-      var socket = req.socket;
-      var send = ripple.send;
-      var exists = name in socket.deps;
+      var name = req.name,
+          type = req.type,
+          socket = req.socket,
+          send = ripple.send,
+          exists = name in socket.deps;
+
 
       if (!(name in ripple.resources)) return;
-      if (type !== 'pull') return (next || _identity2.default)(req, res);
-      socket.deps[name] = 1;
-      send(socket)(name);
-      return false;
+      if (type === 'pull') {
+        socket.deps[name] = 1;
+        send(socket)(name);
+      }
+      return (next || _identity2.default)(req, res);
     };
   };
 };
@@ -138,20 +149,26 @@ var reconnect = function reconnect(_ref) {
 var refresh = function refresh(ripple) {
   return function (d) {
     return (0, _group2.default)('refreshing', function (d) {
-      return (0, _values2.default)(ripple.resources).map(function (_ref2) {
-        var name = _ref2.name;
-        return emit(ripple)(name);
-      });
+      return (0, _values2.default)(ripple.resources).map(function (d) {
+        return d.name;
+      }).map(ripple.pull);
     });
   };
 };
 
-var emit = function emit(ripple) {
-  return function (name) {
-    log('pulling', name);
-    ripple.io.emit('change', { name: name, type: 'pull' });
-    ripple.requested[name] = 1;
-    return name;
+var pull = function pull(ripple) {
+  return function (name, node) {
+    if (node instanceof Element) {
+      var original = (0, _attr2.default)('data')(node) || '';
+      if (!original.split(' ').some((0, _is2.default)(name))) (0, _attr2.default)('data', (original + ' ' + name).trim())(node);
+    }
+
+    if (!(name in ripple.requested)) {
+      log('pulling', name);
+      ripple.requested[name] = ripple.send({ name: name, type: 'pull' });
+    }
+
+    return name in ripple.resources ? promise(ripple(name)) : ripple.requested[name];
   };
 };
 
@@ -173,10 +190,10 @@ var format = function format(arr) {
   };
 };
 
-var loaded = function loaded(ripple) {
+var render = function render(ripple) {
   return function (next) {
     return function (el) {
-      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(emit(ripple)).length ? false : scan(ripple)(next(el));
+      return ripple.deps(el).filter((0, _not2.default)(_is2.default.in(ripple.requested))).map(ripple.pull).length ? false : scan(ripple)(next(el));
     };
   };
 };
