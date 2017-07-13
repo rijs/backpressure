@@ -173,8 +173,8 @@ var pull = function pull(ripple) {
 };
 
 var limit = function limit(next) {
-  return function (req) {
-    return req.name in req.socket.deps ? (next || _identity2.default)(req) : false;
+  return function (req, socket) {
+    return req.name in socket.deps ? (next || _identity2.default)(req) : false;
   };
 };
 
