@@ -46,13 +46,13 @@ describe('Backpressure', function(){
       var ripple 
 
       ripple = back(next(sync(data(core()))))
-      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'bar' })).to.be.eql(false)
-      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'foo' })).to.be.eql(5)
+      expect(ripple.to({ name: 'bar' }, { deps: { foo: 1 }})).to.be.eql(false)
+      expect(ripple.to({ name: 'foo' }, { deps: { foo: 1 }})).to.be.eql(5)
 
       ripple = back(nonext(sync(data(core()))))
-      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'bar' })).to.be.eql(false)
-      expect(ripple.to({ socket: { deps: { foo: 1 }}, name: 'foo' }))
-        .to.be.eql({ socket: { deps: { foo: 1 }}, name: 'foo' })
+      expect(ripple.to({ name: 'bar' }, { deps: { foo: 1 }})).to.be.eql(false)
+      expect(ripple.to({ name: 'foo' }, { deps: { foo: 1 }}))
+        .to.be.eql({ name: 'foo' })
 
       function next(ripple) {
         ripple.to = function(){ return 5 }
@@ -94,26 +94,28 @@ describe('Backpressure', function(){
       var ripple = back(sync(data(core())))
 
       ripple('foo', { foo: 'bar' }) 
-
-      receive.call(socket, { name: 'foo', type: 'pull' }) 
-      expect(socket.deps).to.be.eql({ foo: 1 })
-      expect(other.deps).to.be.eql({})
       
-      // should not oversend
-      ripple('foo', { foo: 'baz' }) 
-
-      // subsequent changes should ripple
-      receive.call({ deps: {} }, { name: 'foo', type: 'update', value: { foo: 'boo' }})
-      expect(ripple.resources.foo.body).to.be.eql({ foo: 'boo' })
-
       time(d => {
-        expect(socket.emitted).to.be.eql([
-          { name: 'foo', time: 0, type: 'update', value: { foo: 'bar' }, headers }
-        , { name: 'foo', time: 1, type: 'update', value: { foo: 'baz' }, headers }
-        , { name: 'foo', time: 2, type: 'update', value: { foo: 'boo' }, headers }       
-        ])
-        expect(other.emitted).to.be.eql([])
-        done()
+        receive.call(socket, { name: 'foo', type: 'pull' }) 
+        expect(socket.deps).to.be.eql({ foo: 1 })
+        expect(other.deps).to.be.eql({})
+        
+        // should not oversend
+        ripple('foo', { foo: 'baz' }) 
+
+        // subsequent changes should ripple
+        receive.call({ deps: {} }, { name: 'foo', type: 'update', value: { foo: 'boo' }})
+        expect(ripple.resources.foo.body).to.be.eql({ foo: 'boo' })
+
+        time(d => {
+          expect(socket.emitted).to.be.eql([
+            { name: 'foo', time: 0, type: 'update', value: { foo: 'bar' }, headers }
+          , { name: 'foo', time: 1, type: 'update', value: { foo: 'baz' }, headers }
+          , { name: 'foo', time: 2, type: 'update', value: { foo: 'boo' }, headers }       
+          ])
+          expect(other.emitted).to.be.eql([])
+          done()
+        })
       })
     })
 

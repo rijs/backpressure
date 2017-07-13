@@ -66,8 +66,8 @@ const pull = ripple => (name, node) => {
 }
 
 
-const limit = next => req => 
-    req.name in req.socket.deps
+const limit = next => (req, socket) => 
+    req.name in socket.deps
   ? (next || identity)(req)
   : false
 
