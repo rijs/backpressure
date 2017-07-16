@@ -165,7 +165,9 @@ var pull = function pull(ripple) {
 
     if (!(name in ripple.requested)) {
       log('pulling', name);
-      ripple.requested[name] = ripple.send({ name: name, type: 'pull' });
+      ripple.requested[name] = ripple.send({ name: name, type: 'pull' }).then(function (d) {
+        return d[0][0];
+      });
     }
 
     return name in ripple.resources ? promise(ripple(name)) : ripple.requested[name];
