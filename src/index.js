@@ -57,7 +57,7 @@ const pull = ripple => (name, node) => {
 
   if (!(name in ripple.requested)) {
     log('pulling', name)
-    ripple.requested[name] = ripple.send({ name, type: 'pull' })
+    ripple.requested[name] = ripple.send({ name, type: 'pull' }).then(d => d[0][0])
   } 
 
   return name in ripple.resources 

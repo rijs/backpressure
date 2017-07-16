@@ -319,19 +319,38 @@ describe('Backpressure', function(){
       })
     })
 
-    it('should subscribe node to updates', function(){  
+    it('should subscribe node to updates', function(done){  
       document.body.innerHTML = '<x-foo></x-foo>'
       var ripple = back(sync(draw(data(core()))))
         , foo = document.body.firstChild
+        , responses = 0
 
-      ripple.pull('bar', foo)
+      ripple
+        .pull('bar', foo)
+        .then(d => expect(d).to.be.eql('bar'))
+        .then(d => responses++)
+
       expect(attr('data')(foo)).to.be.eql('bar')
 
-      ripple.pull('bar', foo)
+      ripple
+        .pull('bar', foo)
+        .then(d => expect(d).to.be.eql('bar'))
+        .then(d => responses++)
+
       expect(attr('data')(foo)).to.be.eql('bar')
 
-      ripple.pull('baz', foo)
+      ripple
+        .pull('baz', foo)
+        .then(d => expect(d).to.be.eql('baz'))
+        .then(d => responses++)
+
       expect(attr('data')(foo)).to.be.eql('bar baz')
+
+      time(d => {
+        emitted[0].cb('bar')
+        emitted[1].cb('baz')
+      })
+      time(20, d => responses == 3 && done())
     })
 
   })
@@ -358,7 +377,11 @@ function sioClient(){
       if (type === 'connect') connect = fn
       if (type === 'reconnect') reconnect = fn
     }
-  , emit: function(type, data) { emitted.push([type, data]) }
+  , emit: function(type, data, cb) { 
+      var args = [type, data]
+      def(args, 'cb', cb)
+      emitted.push(args) 
+    }
   , io: { connect: function(){ connected = true }, disconnect: function(){ disconnected = true } }
   }
 } 
