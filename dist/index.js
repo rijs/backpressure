@@ -163,12 +163,13 @@ var pull = function pull(ripple) {
       if (!original.split(' ').some((0, _is2.default)(name))) (0, _attr2.default)('data', (original + ' ' + name).trim())(node);
     }
 
-    if (!(name in ripple.requested)) {
-      log('pulling', name);
-      ripple.requested[name] = ripple.send({ name: name, type: 'pull' }).then(function (d) {
-        return d[0][0];
-      });
-    }
+    ripple.requested[name] = ripple.requested[name] || ripple.send(name, 'pull') && ripple.on('change').filter(function (d) {
+      return d[0] == name && d[1].type == 'update' && !d[1].key;
+    }).map(function (d) {
+      return !ripple.requested[name].source.unsubscribe();
+    }).map(function (d) {
+      return ripple(name);
+    });
 
     return name in ripple.resources ? promise(ripple(name)) : ripple.requested[name];
   };
