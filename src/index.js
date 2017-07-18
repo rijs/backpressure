@@ -55,10 +55,11 @@ const pull = ripple => (name, node) => {
       attr('data', `${original} ${name}`.trim())(node)
   }
 
-  if (!(name in ripple.requested)) {
-    log('pulling', name)
-    ripple.requested[name] = ripple.send({ name, type: 'pull' }).then(d => d[0][0])
-  } 
+  ripple.requested[name] = ripple.requested[name] || (ripple.send(name, 'pull') && ripple
+    .on('change')
+    .filter(d => d[0] == name && d[1].type == 'update' && !d[1].key)
+    .map(d => !ripple.requested[name].source.unsubscribe())
+    .map(d => ripple(name)))
 
   return name in ripple.resources 
        ? promise(ripple(name))

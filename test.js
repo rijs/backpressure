@@ -323,34 +323,45 @@ describe('Backpressure', function(){
       document.body.innerHTML = '<x-foo></x-foo>'
       var ripple = back(sync(draw(data(core()))))
         , foo = document.body.firstChild
-        , responses = 0
+        , pull = 0, responses = 0
 
       ripple
         .pull('bar', foo)
         .then(d => expect(d).to.be.eql('bar'))
-        .then(d => responses++)
+        .then(d => pull++)
 
       expect(attr('data')(foo)).to.be.eql('bar')
 
       ripple
         .pull('bar', foo)
         .then(d => expect(d).to.be.eql('bar'))
-        .then(d => responses++)
+        .then(d => pull++)
 
       expect(attr('data')(foo)).to.be.eql('bar')
 
       ripple
         .pull('baz', foo)
         .then(d => expect(d).to.be.eql('baz'))
-        .then(d => responses++)
+        .then(d => pull++)
+
+      ripple.requested.bar.map(d => responses++)
 
       expect(attr('data')(foo)).to.be.eql('bar baz')
 
       time(d => {
-        emitted[0].cb('bar')
-        emitted[1].cb('baz')
+        ripple('bar', 'bar')
+        ripple('baz', 'baz')
       })
-      time(20, d => responses == 3 && done())
+      time(20, d => {
+        expect(pull).to.be.eql(3)
+        ripple('bar', 'bar')
+        ripple('bar', 'bar')
+        ripple('bar', 'bar')
+      })
+      time(30, d => {
+        expect(responses).to.be.eql(1)
+        done()
+      })
     })
 
   })
